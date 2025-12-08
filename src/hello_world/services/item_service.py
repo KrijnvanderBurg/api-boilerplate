@@ -3,7 +3,7 @@
 from typing import Dict, List
 from uuid import uuid4
 
-from hello_world.api.models.item import Item, ItemCreate, ItemUpdate
+from hello_world.models.item import Item, ItemCreate, ItemUpdate
 
 
 class ItemService:

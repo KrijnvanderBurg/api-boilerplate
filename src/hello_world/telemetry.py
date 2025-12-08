@@ -30,7 +30,6 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
-from hello_world import get_run_datetime, get_run_id
 from hello_world.settings import AppSettings, get_settings
 from hello_world.utils.logger import get_logger
 

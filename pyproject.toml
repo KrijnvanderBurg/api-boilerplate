@@ -14,6 +14,7 @@ pydantic-settings = "^2.8.0"
 
 # FastAPI
 fastapi = "^0.124.0"
+uvicorn = { extras = ["standard"], version = "^0.32.0" }
 
 # OpenTelemetry core packages - using compatible versions
 opentelemetry-api = "^1.37.0"

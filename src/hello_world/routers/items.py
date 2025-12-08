@@ -4,8 +4,8 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException
 
-from hello_world.api.models.item import Item, ItemCreate, ItemUpdate
-from hello_world.api.services.item_service import ItemService
+from hello_world.models.item import Item, ItemCreate, ItemUpdate
+from hello_world.services.item_service import ItemService
 
 router = APIRouter()
 item_service = ItemService()

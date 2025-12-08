@@ -7,7 +7,7 @@ class ExitCode(enum.IntEnum):
     """Define standardized exit codes for application termination."""
 
     SUCCESS = 0
-
+    UNKNOWN_ERROR = 10
 
 
 class HelloWorldError(Exception):
@@ -49,5 +49,4 @@ class HelloWorldIOError(HelloWorldError):
         Args:
             message: Description of the I/O error
         """
-        super().__init__(message=message, exit_code=ExitCode.IO_ERROR)
-
+        super().__init__(message=message, exit_code=ExitCode.UNKNOWN_ERROR)
