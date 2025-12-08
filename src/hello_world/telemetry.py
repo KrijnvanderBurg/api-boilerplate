@@ -108,8 +108,6 @@ def setup_telemetry(
         {
             "service.name": service_name,
             "service.environment": str(settings.environment),
-            "run.instance.id": get_run_id(),
-            "run.instance.datetime": str(get_run_datetime()),
             "host.name": platform.node(),
             "host.arch": platform.machine(),
             "process.pid": str(getpid()),

@@ -1,6 +1,5 @@
 """Item service - business logic for items."""
 
-from typing import Dict, List
 from uuid import uuid4
 
 from hello_world.models.item import Item, ItemCreate, ItemUpdate
@@ -11,7 +10,7 @@ class ItemService:
 
     def __init__(self) -> None:
         """Initialize the service with in-memory storage."""
-        self.items_db: Dict[str, Item] = {}
+        self.items_db: dict[str, Item] = {}
 
     def create_item(self, item: ItemCreate) -> Item:
         """Create a new item."""
@@ -20,8 +19,8 @@ class ItemService:
         self.items_db[item_id] = new_item
         return new_item
 
-    def list_items(self) -> List[Item]:
-        """List all items."""
+    def list_items(self) -> list[Item]:
+        """list all items."""
         return list(self.items_db.values())
 
     def get_item(self, item_id: str) -> Item | None:

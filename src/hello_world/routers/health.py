@@ -1,6 +1,6 @@
 """Health check endpoints."""
 
-from typing import Dict
+from typing import dict
 
 from fastapi import APIRouter
 
@@ -8,12 +8,12 @@ router = APIRouter()
 
 
 @router.get("/health")
-async def health_check() -> Dict[str, str]:
+async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "healthy"}
 
 
 @router.get("/ready")
-async def readiness_check() -> Dict[str, str]:
+async def readiness_check() -> dict[str, str]:
     """Readiness check endpoint."""
     return {"status": "ready"}

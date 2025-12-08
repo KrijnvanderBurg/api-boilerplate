@@ -1,6 +1,6 @@
 """Items API router."""
 
-from typing import List
+from typing import list
 
 from fastapi import APIRouter, HTTPException
 
@@ -18,8 +18,8 @@ async def create_item(item: ItemCreate) -> Item:
 
 
 @router.get("/items")
-async def list_items() -> List[Item]:
-    """List all items."""
+async def list_items() -> list[Item]:
+    """list all items."""
     return item_service.list_items()
 
 
