@@ -1,0 +1,104 @@
+name: Build and Test
+
+on:
+  workflow_call:
+    outputs:
+      version:
+        description: "Package version from pyproject.toml"
+        value: ${{ jobs.build.outputs.version }}
+
+jobs:
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: ./.github/actions/setup-python
+        with:
+          python-version: 3.13
+
+      - name: Setup Poetry
+        uses: ./.github/actions/poetry-setup
+
+      - name: Install Dependencies
+        uses: ./.github/actions/poetry-install
+
+      - name: Build Package
+        uses: ./.github/actions/poetry-build
+
+      - name: Get version from pyproject.toml
+        id: get_version
+        run: |
+          VERSION=$(sh ${{ github.workspace }}/.github/scripts/poetry-get-version.sh)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  test:
+    name: Run Tests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: ./.github/actions/setup-python
+        with:
+          python-version: 3.13
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Install Package
+        uses: ./.github/actions/install-package
+
+      - name: Run Unit Tests
+        uses: ./.github/actions/run-pytest
+        with:
+          tests-path: tests/unit
+          coverage-path: hello_world
+          coverage-xml-output: coverage-unit.xml
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-unit
+          path: coverage-unit.xml
+          retention-days: 7
+
+      - name: Run E2E Tests
+        uses: ./.github/actions/run-pytest
+        with:
+          tests-path: tests/e2e
+          coverage-path: hello_world
+          coverage-xml-output: coverage-e2e.xml
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-e2e
+          path: coverage-e2e.xml
+          retention-days: 7
+
+      - name: Validate ./examples/ jobs
+        run: |
+          for dir in ./examples/*/; do
+            workflow_file=$(find "$dir" -maxdepth 1 -name "job.*")
+            alert_file=$(find "$dir" -maxdepth 1 -name "alert.*")
+            echo "Validating $(basename "$dir")..."
+            python -m hello_world --log-level WARNING validate --alert-filepath "$alert_file" --workflow-filepath "$workflow_file"
+          done

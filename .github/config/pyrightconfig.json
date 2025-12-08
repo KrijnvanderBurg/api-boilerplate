@@ -1,0 +1,23 @@
+{
+  "defineConstant": {
+    "DEBUG": false
+  },
+  "exclude": [],
+  "executionEnvironments": [
+    {
+      "root": "./"
+    }
+  ],
+  "ignore": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.venv/**",
+    "**/.devcontainer/**",
+    "**/.devcontainer/**"
+  ],
+  "include": [
+    "./"
+  ],
+  "reportMissingImports": false,
+  "reportMissingTypeStubs": false
+}

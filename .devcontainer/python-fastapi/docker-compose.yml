@@ -1,0 +1,83 @@
+services:
+    devcontainer:
+        platform: linux/amd64
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                VARIANT: ubuntu-24.04
+            target: base
+        volumes:
+            - ../../:/workspace:cached
+            - devcontainer-bashhistory:/commandhistory
+            - poetry-cache:/home/vscode/.cache/pypoetry
+        command: sleep infinity
+
+    otel-collector:
+        image: otel/opentelemetry-collector-contrib:latest
+        platform: linux/amd64
+        ports:
+            - "4317:4317"    # OTLP gRPC receiver
+            - "4318:4318"    # OTLP HTTP receiver
+        volumes:
+            - ../../.devcontainer/python-spark/otel-collector/otel-config.yaml:/etc/otel/config.yaml
+        command: ["--config=/etc/otel/config.yaml"]
+        networks:
+            - default
+
+    tempo:
+        image: grafana/tempo:latest
+        platform: linux/amd64
+        ports:
+            - "3200:3200"   # Tempo HTTP API
+        volumes:
+            - tempo-storage:/var/tempo
+            - ../../.devcontainer/python-spark/tempo/tempo.yaml:/etc/tempo.yaml
+        command:
+            - "-config.file=/etc/tempo.yaml"
+        depends_on:
+            - otel-collector
+        networks:
+            - default
+
+    loki:
+        image: grafana/loki:latest
+        platform: linux/amd64
+        ports:
+            - "3100:3100"    # Loki HTTP API
+        volumes:
+            - loki-storage:/loki
+            - ../../.devcontainer/python-spark/loki/loki-config.yaml:/etc/loki/loki-config.yaml
+        command:
+            - -config.file=/etc/loki/loki-config.yaml
+        depends_on:
+            - otel-collector
+        networks:
+            - default
+
+    grafana:
+        image: grafana/grafana:latest
+        platform: linux/amd64
+        ports:
+            - "3000:3000"    # Grafana UI
+        environment:
+            - GF_AUTH_ANONYMOUS_ENABLED=true
+            - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+            - GF_AUTH_DISABLE_LOGIN_FORM=true
+            - GF_SECURITY_ALLOW_EMBEDDING=true
+        volumes:
+            # - grafana-storage:/var/lib/grafana
+            - ./grafana/provisioning:/etc/grafana/provisioning
+        depends_on:
+            - tempo
+            - loki
+            - otel-collector
+        networks:
+            - default
+
+volumes:
+    devcontainer-bashhistory:
+    poetry-cache:
+    grafana-storage:
+    loki-storage:
+    tempo-storage:

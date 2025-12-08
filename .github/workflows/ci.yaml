@@ -1,0 +1,145 @@
+name: hello_world-CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  formatters-and-linters:
+    name: Formatters & Linters
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: ./.github/actions/setup-python
+        with:
+          python-version: 3.13
+
+      - name: Setup Poetry
+        uses: ./.github/actions/poetry-setup
+
+      - name: Install Dependencies
+        uses: ./.github/actions/poetry-install
+
+      # Formatters
+      - name: Run Ruff Formatter
+        uses: ./.github/actions/run-ruff-formatter
+
+      # Linters
+      - name: Run Ruff Linter
+        uses: ./.github/actions/run-ruff-linter
+
+      - name: Run Flake8
+        uses: ./.github/actions/run-flake8
+
+      - name: Run Pylint
+        uses: ./.github/actions/run-pylint
+
+      # Type Checkers
+      - name: Run Mypy
+        uses: ./.github/actions/run-mypy
+
+      - name: Run Pyright
+        uses: ./.github/actions/run-pyright
+
+      # Dead Code Detector
+      - name: Run Vulture
+        uses: ./.github/actions/run-vulture
+
+  security:
+    name: Security Scans
+    needs: formatters-and-linters
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write  # Required for uploading SARIF to Code Scanning
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for secret scanning
+
+      - name: Install Python
+        uses: ./.github/actions/setup-python
+        with:
+          python-version: 3.13
+
+      - name: Setup Poetry
+        uses: ./.github/actions/poetry-setup
+
+      - name: Install Dependencies
+        uses: ./.github/actions/poetry-install
+
+      - name: Run Bandit
+        uses: ./.github/actions/run-bandit
+
+      - name: Run Semgrep
+        uses: ./.github/actions/run-semgrep
+
+      - name: Run Trufflehog
+        uses: ./.github/actions/run-trufflehog
+
+  build-and-test:
+    uses: ./.github/workflows/build-and-test.yml
+
+  devcontainer-build:
+    name: DevContainer Build Test
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        devcontainer:
+          - python-spark
+          # Add more devcontainers here as needed
+          # - spark-cluster
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install DevContainer CLI
+        run: npm install -g @devcontainers/cli
+
+      - name: Build DevContainer - ${{ matrix.devcontainer }}
+        run: |
+          devcontainer build \
+            --workspace-folder . \
+            --config .devcontainer/${{ matrix.devcontainer }}/devcontainer.json \
+            --image-name hello_world-devcontainer-${{ matrix.devcontainer }}:test
+        env:
+          DOCKER_BUILDKIT: 1
+          BUILDKIT_PROGRESS: plain
+          PROGRESS_NO_TRUNC: 1
+          CI: true
+
+      - name: Verify DevContainer Build
+        run: |
+          echo "DevContainer ${{ matrix.devcontainer }} built successfully"
+          docker images | grep hello_world-devcontainer-${{ matrix.devcontainer }}
+
+      - name: Test DevContainer Startup
+        run: |
+          devcontainer up \
+            --workspace-folder . \
+            --config .devcontainer/${{ matrix.devcontainer }}/devcontainer.json
+
+      - name: Run Basic Commands in DevContainer
+        run: |
+          devcontainer exec \
+            --workspace-folder . \
+            --config .devcontainer/${{ matrix.devcontainer }}/devcontainer.json \
+            bash -c "python --version"

@@ -1,0 +1,25 @@
+name: Poetry Install
+description: Install project dependencies using Poetry
+inputs:
+  target-path:
+    description: Path to the directory containing pyproject.toml
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Cache Poetry Dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/pypoetry
+          ~/.virtualenvs
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        sh ${{ github.workspace }}/.github/scripts/poetry-install.sh \
+          "${{ inputs.target-path }}"
