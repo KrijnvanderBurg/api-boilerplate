@@ -7,7 +7,7 @@ variable loading, caching mechanism, and settings access patterns.
 import os
 from unittest.mock import patch
 
-from samara.settings import AppSettings, get_settings
+from hello_world.settings import AppSettings, get_settings
 
 
 class TestAppSettingsValidation:
