@@ -6,7 +6,7 @@ from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import TracerProvider
 
-from samara.telemetry import get_parent_context, get_tracer, setup_telemetry, trace_span
+from hello_world.telemetry import get_parent_context, get_tracer, setup_telemetry, trace_span
 
 
 class TestTelemetrySetup:
