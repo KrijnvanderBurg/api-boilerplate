@@ -1,7 +1,5 @@
 """Health check endpoints."""
 
-from typing import dict
-
 from fastapi import APIRouter
 
 router = APIRouter()

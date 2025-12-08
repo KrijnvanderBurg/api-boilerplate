@@ -1,7 +1,5 @@
 """Items API router."""
 
-from typing import list
-
 from fastapi import APIRouter, HTTPException
 
 from hello_world.models.item import Item, ItemCreate, ItemUpdate

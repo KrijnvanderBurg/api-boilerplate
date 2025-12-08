@@ -2,10 +2,11 @@
 
 from unittest.mock import patch
 
-from opentelemetry import trace
+from opentelemetry import context, trace
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import TracerProvider
 
+from hello_world import telemetry
 from hello_world.telemetry import get_parent_context, get_tracer, setup_telemetry, trace_span
 
 
@@ -21,17 +22,21 @@ class TestTelemetrySetup:
 
     def test_setup_telemetry_with_otlp_endpoint_adds_exporter(self) -> None:
         """Test telemetry setup with OTLP endpoint adds OTLP exporter."""
-        with patch("samara.telemetry.OTLPSpanExporter") as mock_exporter:
+        with patch.object(telemetry, "OTLPSpanExporter") as mock_exporter_class:
+            # Create a mock instance with proper shutdown method
+            mock_exporter = mock_exporter_class.return_value
+            mock_exporter.shutdown.return_value = None
+
             setup_telemetry(service_name="test-service", otlp_traces_endpoint="http://localhost:4318/v1/traces")
 
             # OTLP exporter should be created with the endpoint
-            mock_exporter.assert_called_once_with(endpoint="http://localhost:4318/v1/traces")
+            mock_exporter_class.assert_called_once_with(endpoint="http://localhost:4318/v1/traces")
 
     def test_setup_telemetry_with_traceparent_attacches_context(self) -> None:
         """Test telemetry setup with traceparent attaches parent context."""
         traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
 
-        with patch("samara.telemetry.context.attach") as mock_attach:
+        with patch.object(context, "attach") as mock_attach:
             setup_telemetry(
                 service_name="test-service",
                 otlp_traces_endpoint=None,
@@ -44,7 +49,7 @@ class TestTelemetrySetup:
 
     def test_setup_telemetry_without_traceparent_does_not_attach_context(self) -> None:
         """Test telemetry setup without traceparent does not attach context."""
-        with patch("samara.telemetry.context.attach") as mock_attach:
+        with patch.object(context, "attach") as mock_attach:
             setup_telemetry(
                 service_name="test-service",
                 otlp_traces_endpoint=None,
@@ -60,7 +65,7 @@ class TestTelemetrySetup:
         traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
         tracestate = "vendor1=value1,vendor2=value2"
 
-        with patch("samara.telemetry.context.attach") as mock_attach:
+        with patch.object(context, "attach") as mock_attach:
             setup_telemetry(
                 service_name="test-service",
                 otlp_traces_endpoint=None,
