@@ -24,8 +24,6 @@
 		"PIP_DISABLE_PIP_VERSION_CHECK": "1",
 		"POETRY_VIRTUALENVS_CREATE": "false",
 		"HELLO_WORLD_ENVIRONMENT": "dev"
-		// "HELLO_WORLD_OTLP_TRACES_ENDPOINT": "http://otel-collector:4318/v1/traces",
-		// "HELLO_WORLD_OTLP_LOGS_ENDPOINT": "http://otel-collector:4318/v1/logs"
 	},
 	//
 	// Port forwarding for OTEL Collector and observability backends
