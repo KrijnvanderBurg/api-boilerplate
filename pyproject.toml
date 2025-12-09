@@ -16,10 +16,8 @@ pydantic-settings = "^2.8.0"
 fastapi = "^0.124.0"
 uvicorn = { extras = ["standard"], version = "^0.32.0" }
 
-# OpenTelemetry core packages - using compatible versions
-opentelemetry-api = "^1.37.0"
-opentelemetry-sdk = "^1.37.0"
-opentelemetry-exporter-otlp = "^1.37.0"
+# OpenTelemetry
+opentelemetry-instrumentation-fastapi = "^0.60b0"
 
 [tool.poetry.group.test.dependencies]
 pre_commit = "*"

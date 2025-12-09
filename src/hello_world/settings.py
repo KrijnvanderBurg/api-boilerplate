@@ -8,8 +8,6 @@ Key Features:
     - Singleton pattern for consistent configuration access
     - Automatic environment variable loading with HELLO_WORLD_ prefix
     - Type validation and conversion via Pydantic
-    - OpenTelemetry integration for observability
-    - W3C Trace Context support for distributed tracing
     - Immutable configuration after initialization
 
 Typical Usage:
@@ -23,7 +21,6 @@ Typical Usage:
     >>> # Settings are automatically loaded from environment variables:
     >>> # HELLO_WORLD_LOG_LEVEL=DEBUG
     >>> # HELLO_WORLD_ENVIRONMENT=production
-    >>> # HELLO_WORLD_OTLP_TRACES_ENDPOINT=https://otel-collector:4318/v1/traces
 """
 
 from functools import lru_cache
@@ -54,47 +51,14 @@ class AppSettings(BaseSettings):
             Loaded from HELLO_WORLD_LOG_LEVEL environment variable. When not set,
             defaults to None and the application uses INFO level.
 
-        environment: Deployment environment identifier used for telemetry and
+        environment: Deployment environment identifier.
             resource attribution. Common values include:
             - dev: Development environment
             - test: Testing/QA environment
             - staging: Pre-production staging environment
             - prod/production: Production environment
             Loaded from HELLO_WORLD_ENVIRONMENT environment variable. When not set,
-            defaults to None. This value is attached to all telemetry data
-            for environment-based filtering and analysis.
-
-        trace_parent: W3C Trace Context traceparent header for distributed tracing.
-            Format: "00-{trace-id}-{parent-id}-{trace-flags}"
-            Example: "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
-            Loaded from HELLO_WORLD_TRACE_PARENT environment variable. Used to
-            propagate trace context across service boundaries, enabling
-            end-to-end transaction tracking in distributed systems.
-
-        trace_state: W3C Trace Context tracestate header for distributed tracing.
-            Carries vendor-specific trace information as key-value pairs.
-            Example: "congo=t61rcWkgMzE,rojo=00f067aa0ba902b7"
-            Loaded from HELLO_WORLD_TRACE_STATE environment variable. Allows
-            multiple tracing systems to participate in the same trace.
-
-        otlp_traces_endpoint: OTLP HTTP endpoint for exporting distributed traces.
-            Supports any OpenTelemetry Protocol (OTLP) compatible backend:
-            - OTEL Collector (recommended): "https://otel-collector:4318/v1/traces"
-            - Direct to Jaeger: "https://jaeger:4318/v1/traces"
-            - Direct to Tempo: "https://tempo:4318/v1/traces"
-            - Any OTLP/HTTP compatible endpoint
-            Loaded from HELLO_WORLD_OTLP_TRACES_ENDPOINT environment variable.
-            When set, all spans are automatically exported to this endpoint
-            for visualization and analysis in tools like Jaeger or Grafana.
-
-        otlp_logs_endpoint: OTLP HTTP endpoint for exporting structured logs.
-            Supports any OpenTelemetry Protocol (OTLP) compatible backend:
-            - OTEL Collector (recommended): "https://otel-collector:4318/v1/logs"
-            - Direct to Loki: "https://loki:3100/otlp/v1/logs"
-            - Any OTLP/HTTP compatible endpoint
-            Loaded from HELLO_WORLD_OTLP_LOGS_ENDPOINT environment variable.
-            When set, all logs are automatically exported with full structured
-            attributes for querying in Loki/Grafana or other log backends.
+            defaults to None.
 
     Examples:
         Basic usage with default settings:
@@ -111,19 +75,6 @@ class AppSettings(BaseSettings):
         >>> settings = AppSettings()
         >>> print(settings.log_level)  # 'DEBUG'
         >>> print(settings.environment)  # 'production'
-
-        Configure OpenTelemetry endpoints:
-
-        >>> os.environ['HELLO_WORLD_OTLP_TRACES_ENDPOINT'] = 'https://otel:4318/v1/traces'
-        >>> os.environ['HELLO_WORLD_OTLP_LOGS_ENDPOINT'] = 'https://otel:4318/v1/logs'
-        >>> settings = AppSettings()
-        >>> print(settings.otlp_traces_endpoint)  # 'https://otel:4318/v1/traces'
-
-        Distributed tracing with W3C Trace Context:
-
-        >>> os.environ['HELLO_WORLD_TRACE_PARENT'] = '00-abc123-def456-01'
-        >>> settings = AppSettings()
-        >>> print(settings.trace_parent)  # '00-abc123-def456-01'
 
     Note:
         - Settings are immutable after initialization by default
@@ -144,10 +95,11 @@ class AppSettings(BaseSettings):
 
     log_level: str | None = Field(default=None, description="Logging level of the system")
     environment: str | None = Field(default=None, description="Deployment environment (dev, test, acc, prod)")
-    trace_parent: str | None = Field(default=None, description="W3C Trace Context traceparent for distributed tracing")
-    trace_state: str | None = Field(default=None, description="W3C Trace Context tracestate for distributed tracing")
-    otlp_traces_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting traces")
-    otlp_logs_endpoint: str | None = Field(default=None, description="OTLP endpoint for exporting logs")
+
+    # OpenTelemetry configuration
+    otel_service_name: str = Field(default="hello-world-api", description="Service name for OpenTelemetry traces")
+    otel_exporter_otlp_endpoint: str | None = Field(default=None, description="OTLP exporter endpoint URL")
+    otel_enabled: bool = Field(default=True, description="Enable/disable OpenTelemetry instrumentation")
 
 
 @lru_cache
@@ -190,11 +142,6 @@ def get_settings() -> AppSettings:
         ...     settings = get_settings()
         ...     logging.basicConfig(level=settings.log_level or 'INFO')
         >>>
-        >>> def setup_telemetry():
-        ...     settings = get_settings()
-        ...     if settings.otlp_traces_endpoint:
-        ...         # Configure OpenTelemetry exporter
-        ...         pass
 
         Clear cache to reload settings after environment changes:
 
