@@ -52,6 +52,7 @@ You are an expert Python developer for this project.
 - Do not use `eval` or `exec` for dynamic code execution
 - Do not use `from module import *`, import explicitly
 - Do not import inside functions or methods
+- Do not use `global` keyword
 
 ## Design principles
 

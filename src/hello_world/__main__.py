@@ -5,23 +5,12 @@ from typing import AsyncGenerator
 
 import uvicorn
 from fastapi import FastAPI, Request, status
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from hello_world.exceptions import HelloWorldError
+from hello_world.exceptions import HelloWorldError, ItemAlreadyExistsError, ItemNotFoundError, ItemValidationError
 from hello_world.routers import health, items
-from hello_world.settings import get_settings
-from hello_world.utils.logger import get_logger, set_logger
+from hello_world.utils.logger import get_logger
 
-# Configuration constants
-API_PREFIX = "/api/v1"
-CORS_ORIGINS: list[str] = []  # Add allowed origins here, e.g., ["http://localhost:3000"]
-
-# Get settings
-settings = get_settings()
-
-# Configure logger
-set_logger(level=settings.log_level or "INFO")
 logger = get_logger(__name__)
 
 
@@ -39,15 +28,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         None: Control during the application's lifetime
     """
     # Startup
-    logger.info(
-        "Application starting up",
-        version=app.version,
-        environment=settings.environment or "unknown",
-        debug=settings.debug,
-    )
     yield
     # Shutdown
-    logger.info("Application shutting down")
 
 
 app = FastAPI(
@@ -55,22 +37,85 @@ app = FastAPI(
     description="A production-ready FastAPI boilerplate with best practices",
     version="0.1.0",
     lifespan=lifespan,
-    debug=settings.debug,
 )
-
-# Add CORS middleware
-if CORS_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=CORS_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    logger.info("CORS enabled", origins=CORS_ORIGINS)
 
 
 # Exception handlers
+@app.exception_handler(ItemNotFoundError)
+async def item_not_found_handler(request: Request, exc: ItemNotFoundError) -> JSONResponse:
+    """Handle ItemNotFoundError exceptions.
+
+    Args:
+        request: The incoming request
+        exc: The ItemNotFoundError exception
+
+    Returns:
+        JSONResponse: Error response with 404 status
+    """
+    logger.warning(
+        "Item not found",
+        error=str(exc),
+        path=request.url.path,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={
+            "detail": str(exc),
+            "type": "ItemNotFoundError",
+        },
+    )
+
+
+@app.exception_handler(ItemValidationError)
+async def item_validation_error_handler(request: Request, exc: ItemValidationError) -> JSONResponse:
+    """Handle ItemValidationError exceptions.
+
+    Args:
+        request: The incoming request
+        exc: The ItemValidationError exception
+
+    Returns:
+        JSONResponse: Error response with 422 status
+    """
+    logger.warning(
+        "Item validation error",
+        error=str(exc),
+        path=request.url.path,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "detail": str(exc),
+            "type": "ItemValidationError",
+        },
+    )
+
+
+@app.exception_handler(ItemAlreadyExistsError)
+async def item_already_exists_handler(request: Request, exc: ItemAlreadyExistsError) -> JSONResponse:
+    """Handle ItemAlreadyExistsError exceptions.
+
+    Args:
+        request: The incoming request
+        exc: The ItemAlreadyExistsError exception
+
+    Returns:
+        JSONResponse: Error response with 409 status
+    """
+    logger.warning(
+        "Item already exists",
+        error=str(exc),
+        path=request.url.path,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={
+            "detail": str(exc),
+            "type": "ItemAlreadyExistsError",
+        },
+    )
+
+
 @app.exception_handler(HelloWorldError)
 async def hello_world_error_handler(request: Request, exc: HelloWorldError) -> JSONResponse:
     """Handle custom HelloWorld exceptions.
@@ -123,11 +168,7 @@ async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse
     )
 
 
-# Include routers with API prefix
-app.include_router(health.router, prefix=API_PREFIX, tags=["health"])
-app.include_router(items.router, prefix=API_PREFIX, tags=["items"])
-
-
+# Root endpoint
 @app.get("/", include_in_schema=False)
 def root() -> dict[str, str]:
     """Root endpoint redirect info.
@@ -138,8 +179,13 @@ def root() -> dict[str, str]:
     return {
         "message": "Hello World API",
         "docs": "/docs",
-        "health": f"{API_PREFIX}/health",
+        "health": "/health",
     }
+
+
+# Include routers
+app.include_router(health.router, tags=["health"])
+app.include_router(items.router, tags=["items"])
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -147,6 +193,6 @@ if __name__ == "__main__":  # pragma: no cover
         "hello_world.__main__:app",
         host="0.0.0.0",
         port=8000,
-        reload=settings.debug,
-        log_level=settings.log_level.lower() if settings.log_level else "info",
+        reload=False,
+        log_level="info",
     )

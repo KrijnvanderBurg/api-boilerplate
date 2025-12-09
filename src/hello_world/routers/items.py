@@ -1,14 +1,34 @@
 """Items API router."""
 
-from fastapi import APIRouter, HTTPException, Path, status
+from typing import Annotated
 
+from fastapi import APIRouter, Depends, Path, status
+
+from hello_world.exceptions import ItemNotFoundError
 from hello_world.models.item import Item, ItemCreate, ItemUpdate
 from hello_world.services.item_service import ItemService
 from hello_world.utils.logger import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)
-item_service = ItemService()
+
+# Singleton service instance for in-memory storage
+_item_service_instance: ItemService | None = None
+
+
+def get_item_service() -> ItemService:
+    """Dependency injection for ItemService.
+
+    Returns a singleton instance to maintain in-memory state across requests.
+    For production use with a database, this would create a new instance per request.
+
+    Returns:
+        ItemService: The singleton ItemService instance
+    """
+    global _item_service_instance
+    if _item_service_instance is None:
+        _item_service_instance = ItemService()
+    return _item_service_instance
 
 
 @router.post(
@@ -25,10 +45,11 @@ item_service = ItemService()
 )
 def create_item(
     item: ItemCreate,
+    service: Annotated[ItemService, Depends(get_item_service)],
 ) -> Item:
     """Create a new item."""
     logger.info("Creating item", item_name=item.name, price=item.price)
-    created_item = item_service.create_item(item)
+    created_item = service.create_item(item)
     logger.info("Item created successfully", item_id=created_item.id)
     return created_item
 
@@ -42,10 +63,12 @@ def create_item(
         200: {"description": "List of items retrieved successfully"},
     },
 )
-def list_items() -> list[Item]:
+def list_items(
+    service: Annotated[ItemService, Depends(get_item_service)],
+) -> list[Item]:
     """List all items."""
     logger.info("Listing all items")
-    items = item_service.list_items()
+    items = service.list_items()
     logger.info("Items retrieved", count=len(items))
     return items
 
@@ -61,14 +84,15 @@ def list_items() -> list[Item]:
     },
 )
 def get_item(
+    service: Annotated[ItemService, Depends(get_item_service)],
     item_id: str = Path(..., min_length=1, description="The unique identifier of the item"),
 ) -> Item:
     """Get an item by ID."""
     logger.info("Retrieving item", item_id=item_id)
-    item = item_service.get_item(item_id)
+    item = service.get_item(item_id)
     if not item:
         logger.warning("Item not found", item_id=item_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+        raise ItemNotFoundError(item_id)
     logger.info("Item retrieved successfully", item_id=item_id)
     return item
 
@@ -86,15 +110,20 @@ def get_item(
     },
 )
 def update_item(
+    service: Annotated[ItemService, Depends(get_item_service)],
     item_update: ItemUpdate,
     item_id: str = Path(..., min_length=1, description="The unique identifier of the item"),
 ) -> Item:
     """Update an item."""
-    logger.info("Updating item", item_id=item_id, update_data=item_update.model_dump(exclude_unset=True))
-    item = item_service.update_item(item_id, item_update)
+    logger.info(
+        "Updating item",
+        item_id=item_id,
+        update_data=item_update.model_dump(exclude_unset=True),
+    )
+    item = service.update_item(item_id, item_update)
     if not item:
         logger.warning("Item not found for update", item_id=item_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+        raise ItemNotFoundError(item_id)
     logger.info("Item updated successfully", item_id=item_id)
     return item
 
@@ -110,11 +139,12 @@ def update_item(
     },
 )
 def delete_item(
+    service: Annotated[ItemService, Depends(get_item_service)],
     item_id: str = Path(..., min_length=1, description="The unique identifier of the item"),
 ) -> None:
     """Delete an item."""
     logger.info("Deleting item", item_id=item_id)
-    if not item_service.delete_item(item_id):
+    if not service.delete_item(item_id):
         logger.warning("Item not found for deletion", item_id=item_id)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+        raise ItemNotFoundError(item_id)
     logger.info("Item deleted successfully", item_id=item_id)
