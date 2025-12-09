@@ -11,14 +11,17 @@ API Boilerplate
 
 ```bash
 # Run with instrumentation (sends traces to Tempo)
+OTEL_SERVICE_NAME=hello-world-api \
 OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318 \
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
 OTEL_TRACES_EXPORTER=otlp \
+OTEL_METRICS_EXPORTER=none \
+OTEL_LOGS_EXPORTER=none \
 opentelemetry-instrument python -m hello_world
 ```
 
-Then make some requests:
+Generate traffic:
 ```bash
-# Generate traffic to see metrics in Grafana
 for i in {1..100}; do
   curl http://localhost:8000/health
   curl http://localhost:8000/items
@@ -27,6 +30,8 @@ for i in {1..100}; do
 done
 ```
 
-View traces and metrics in Grafana: http://localhost:3000
-- Dashboard: "FastAPI Observability"
+View in Grafana: http://localhost:3000
+- Go to Explore → Tempo
+- Search for traces with: `{service.name="hello-world-api"}`
+- Or open the "FastAPI Observability" dashboard
 

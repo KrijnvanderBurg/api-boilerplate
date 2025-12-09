@@ -16,8 +16,8 @@ processors:
 
 exporters:
   # Export traces to Tempo
-  otlp/tempo:
-    endpoint: tempo:4317
+  otlphttp/tempo:
+    endpoint: http://tempo:3200/otlp
     tls:
       insecure: true
 
@@ -36,7 +36,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/tempo, debug]
+      exporters: [otlphttp/tempo, debug]
 
     logs:
       receivers: [otlp]
