@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from hello_world.items import schemas
-from hello_world.models import Item  # pylint: disable=no-name-in-module
+from hello_world.items.models import Item
 from hello_world.utils import logger as logger_utils
 
 logger = logger_utils.get_logger(__name__)
