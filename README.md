@@ -191,10 +191,10 @@ logger.info("Creating item", item_name=item.name, price=item.price)
 ### 4. Exception Handling
 ```python
 @app.exception_handler(HelloWorldError)
-async def error_handler(request: Request, exc: HelloWorldError):
+async def error_handler(request: Request, e: HelloWorldError):
     return JSONResponse(
         status_code=500,
-        content={"detail": str(exc), "exit_code": exc.exit_code}
+        content={"detail": str(e), "exit_code": e.exit_code}
     )
 ```
 

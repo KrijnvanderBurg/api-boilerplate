@@ -1,6 +1,6 @@
 """Exceptions for the items domain."""
 
-from hello_world.exceptions import ExitCode, HelloWorldError
+from hello_world.exceptions import HelloWorldError
 from hello_world.items import constants
 
 
@@ -13,10 +13,7 @@ class ItemNotFoundError(HelloWorldError):
         Args:
             item_id: The ID of the item that was not found
         """
-        super().__init__(
-            message=f"Item with ID '{item_id}' not found",
-            exit_code=ExitCode.ITEM_NOT_FOUND,
-        )
+        super().__init__(f"Item with ID '{item_id}' not found")
         self.error_code = constants.ErrorCode.ITEM_NOT_FOUND
 
 
@@ -29,10 +26,7 @@ class ItemAlreadyExistsError(HelloWorldError):
         Args:
             item_name: The name of the item that already exists
         """
-        super().__init__(
-            message=f"Item with name '{item_name}' already exists",
-            exit_code=ExitCode.ITEM_ALREADY_EXISTS,
-        )
+        super().__init__(f"Item with name '{item_name}' already exists")
         self.error_code = constants.ErrorCode.ITEM_ALREADY_EXISTS
 
 
@@ -45,5 +39,5 @@ class ItemValidationError(HelloWorldError):
         Args:
             message: Description of the validation error
         """
-        super().__init__(message=message, exit_code=ExitCode.ITEM_VALIDATION_ERROR)
+        super().__init__(message)
         self.error_code = constants.ErrorCode.ITEM_VALIDATION_ERROR

@@ -10,9 +10,9 @@ This router handles all item-related endpoints following FastAPI best practices:
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
-from hello_world.items import dependencies, exceptions, schemas
+from hello_world.items import dependencies, schemas
 from hello_world.pagination import PaginatedResponse, PaginationParams, paginate
 from hello_world.utils import logger as logger_utils
 
@@ -21,7 +21,7 @@ logger = logger_utils.get_logger(__name__)
 
 
 # Exception handlers for items domain
-async def item_not_found_handler(request: Request, exc: exceptions.ItemNotFoundError) -> JSONResponse:
+async def item_not_found_handler(request: Request, exc: Exception) -> Response:
     """Handle ItemNotFoundError exceptions.
 
     Args:
@@ -29,7 +29,7 @@ async def item_not_found_handler(request: Request, exc: exceptions.ItemNotFoundE
         exc: The ItemNotFoundError exception
 
     Returns:
-        JSONResponse: Error response with 404 status
+        Response: Error response with 404 status
     """
     logger.warning(
         "Item not found",
@@ -45,7 +45,7 @@ async def item_not_found_handler(request: Request, exc: exceptions.ItemNotFoundE
     )
 
 
-async def item_validation_error_handler(request: Request, exc: exceptions.ItemValidationError) -> JSONResponse:
+async def item_validation_error_handler(request: Request, exc: Exception) -> Response:
     """Handle ItemValidationError exceptions.
 
     Args:
@@ -53,7 +53,7 @@ async def item_validation_error_handler(request: Request, exc: exceptions.ItemVa
         exc: The ItemValidationError exception
 
     Returns:
-        JSONResponse: Error response with 422 status
+        Response: Error response with 422 status
     """
     logger.warning(
         "Item validation error",
@@ -69,7 +69,7 @@ async def item_validation_error_handler(request: Request, exc: exceptions.ItemVa
     )
 
 
-async def item_already_exists_handler(request: Request, exc: exceptions.ItemAlreadyExistsError) -> JSONResponse:
+async def item_already_exists_handler(request: Request, exc: Exception) -> Response:
     """Handle ItemAlreadyExistsError exceptions.
 
     Args:
@@ -77,7 +77,7 @@ async def item_already_exists_handler(request: Request, exc: exceptions.ItemAlre
         exc: The ItemAlreadyExistsError exception
 
     Returns:
-        JSONResponse: Error response with 409 status
+        Response: Error response with 409 status
     """
     logger.warning(
         "Item already exists",
