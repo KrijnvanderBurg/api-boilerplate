@@ -15,6 +15,7 @@ from hello_world.items import router as items_router
 from hello_world.settings import get_settings
 from hello_world.utils import logger as logger_utils
 
+settings = get_settings()
 logger = logger_utils.get_logger(__name__)
 
 
@@ -29,7 +30,6 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
         None: Control during the application's lifetime
     """
     # Startup
-    settings = get_settings()
     logger.info(
         "Application starting",
         environment=settings.environment,
@@ -49,93 +49,15 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     logger.info("Database connections closed")
 
 
-# Get configuration for environment-based settings
-_settings = get_settings()
-
 app = FastAPI(
     title="Hello World API",
     description="A production-ready FastAPI boilerplate with best practices",
-    version=_settings.app_version,
+    version=settings.app_version,
     lifespan=lifespan,
 )
 
 
 # Exception handlers
-@app.exception_handler(item_exceptions.ItemNotFoundError)
-async def item_not_found_handler(request: Request, exc: item_exceptions.ItemNotFoundError) -> JSONResponse:
-    """Handle ItemNotFoundError exceptions.
-
-    Args:
-        request: The incoming request
-        exc: The ItemNotFoundError exception
-
-    Returns:
-        JSONResponse: Error response with 404 status
-    """
-    logger.warning(
-        "Item not found",
-        error=str(exc),
-        path=request.url.path,
-    )
-    return JSONResponse(
-        status_code=status.HTTP_404_NOT_FOUND,
-        content={
-            "detail": str(exc),
-            "type": "ItemNotFoundError",
-        },
-    )
-
-
-@app.exception_handler(item_exceptions.ItemValidationError)
-async def item_validation_error_handler(request: Request, exc: item_exceptions.ItemValidationError) -> JSONResponse:
-    """Handle ItemValidationError exceptions.
-
-    Args:
-        request: The incoming request
-        exc: The ItemValidationError exception
-
-    Returns:
-        JSONResponse: Error response with 422 status
-    """
-    logger.warning(
-        "Item validation error",
-        error=str(exc),
-        path=request.url.path,
-    )
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={
-            "detail": str(exc),
-            "type": "ItemValidationError",
-        },
-    )
-
-
-@app.exception_handler(item_exceptions.ItemAlreadyExistsError)
-async def item_already_exists_handler(request: Request, exc: item_exceptions.ItemAlreadyExistsError) -> JSONResponse:
-    """Handle ItemAlreadyExistsError exceptions.
-
-    Args:
-        request: The incoming request
-        exc: The ItemAlreadyExistsError exception
-
-    Returns:
-        JSONResponse: Error response with 409 status
-    """
-    logger.warning(
-        "Item already exists",
-        error=str(exc),
-        path=request.url.path,
-    )
-    return JSONResponse(
-        status_code=status.HTTP_409_CONFLICT,
-        content={
-            "detail": str(exc),
-            "type": "ItemAlreadyExistsError",
-        },
-    )
-
-
 @app.exception_handler(HelloWorldError)
 async def hello_world_error_handler(request: Request, exc: HelloWorldError) -> JSONResponse:
     """Handle custom HelloWorld exceptions.
@@ -188,6 +110,12 @@ async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse
     )
 
 
+# Register domain-specific exception handlers
+app.add_exception_handler(item_exceptions.ItemNotFoundError, items_router.item_not_found_handler)  # type: ignore
+app.add_exception_handler(item_exceptions.ItemValidationError, items_router.item_validation_error_handler)  # type: ignore
+app.add_exception_handler(item_exceptions.ItemAlreadyExistsError, items_router.item_already_exists_handler)  # type: ignore
+
+
 # Root endpoint
 @app.get("/", include_in_schema=False)
 async def root() -> dict[str, str]:
@@ -209,11 +137,10 @@ app.include_router(items_router.router)
 
 
 if __name__ == "__main__":  # pragma: no cover
-    app_settings = get_settings()
     uvicorn.run(
         "hello_world.main:app",
-        host=app_settings.server_host,
-        port=app_settings.server_port,
+        host=settings.server_host,
+        port=settings.server_port,
         reload=False,
         log_level="info",
     )

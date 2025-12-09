@@ -9,14 +9,88 @@ This router handles all item-related endpoints following FastAPI best practices:
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
+from fastapi.responses import JSONResponse
 
-from hello_world.items import dependencies, schemas
+from hello_world.items import dependencies, exceptions, schemas
 from hello_world.pagination import PaginatedResponse, PaginationParams, paginate
 from hello_world.utils import logger as logger_utils
 
 router = APIRouter(prefix="/items", tags=["items"])
 logger = logger_utils.get_logger(__name__)
+
+
+# Exception handlers for items domain
+async def item_not_found_handler(request: Request, exc: exceptions.ItemNotFoundError) -> JSONResponse:
+    """Handle ItemNotFoundError exceptions.
+
+    Args:
+        request: The incoming request
+        exc: The ItemNotFoundError exception
+
+    Returns:
+        JSONResponse: Error response with 404 status
+    """
+    logger.warning(
+        "Item not found",
+        error=str(exc),
+        path=request.url.path,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={
+            "detail": str(exc),
+            "type": "ItemNotFoundError",
+        },
+    )
+
+
+async def item_validation_error_handler(request: Request, exc: exceptions.ItemValidationError) -> JSONResponse:
+    """Handle ItemValidationError exceptions.
+
+    Args:
+        request: The incoming request
+        exc: The ItemValidationError exception
+
+    Returns:
+        JSONResponse: Error response with 422 status
+    """
+    logger.warning(
+        "Item validation error",
+        error=str(exc),
+        path=request.url.path,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "detail": str(exc),
+            "type": "ItemValidationError",
+        },
+    )
+
+
+async def item_already_exists_handler(request: Request, exc: exceptions.ItemAlreadyExistsError) -> JSONResponse:
+    """Handle ItemAlreadyExistsError exceptions.
+
+    Args:
+        request: The incoming request
+        exc: The ItemAlreadyExistsError exception
+
+    Returns:
+        JSONResponse: Error response with 409 status
+    """
+    logger.warning(
+        "Item already exists",
+        error=str(exc),
+        path=request.url.path,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={
+            "detail": str(exc),
+            "type": "ItemAlreadyExistsError",
+        },
+    )
 
 
 @router.post(
