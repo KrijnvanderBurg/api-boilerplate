@@ -1,21 +1,34 @@
 """Database configuration and connection management."""
 
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy import MetaData
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
 from hello_world.settings import Settings, get_settings
+
+# PostgreSQL naming conventions for indexes, constraints, etc.
+# This ensures consistent naming across migrations and database objects
+POSTGRES_INDEXES_NAMING_CONVENTION = {
+    "ix": "%(column_0_label)s_idx",
+    "uq": "%(table_name)s_%(column_0_name)s_key",
+    "ck": "%(table_name)s_%(constraint_name)s_check",
+    "fk": "%(table_name)s_%(column_0_name)s_fkey",
+    "pk": "%(table_name)s_pkey",
+}
 
 
 class Base(DeclarativeBase):
     """Base class for all SQLAlchemy models."""
 
+    metadata = MetaData(naming_convention=POSTGRES_INDEXES_NAMING_CONVENTION)
+
 
 class Database:
-    """Database connection manager."""
+    """Async database connection manager."""
 
     def __init__(self, settings: Settings) -> None:
         """Initialize database with settings.
@@ -23,45 +36,58 @@ class Database:
         Args:
             settings: Application settings containing database configuration
         """
-        self.engine = create_engine(
+        self.engine = create_async_engine(
             settings.database_url,
             pool_pre_ping=True,
+            echo=False,
         )
-        self.session_local = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+        self.async_session_maker = async_sessionmaker(
+            self.engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
 
-    def create_tables(self) -> None:
+    async def create_tables(self) -> None:
         """Create all database tables."""
-        Base.metadata.create_all(bind=self.engine)
+        async with self.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
-    def drop_tables(self) -> None:
+    async def drop_tables(self) -> None:
         """Drop all database tables."""
-        Base.metadata.drop_all(bind=self.engine)
+        async with self.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
 
-    def get_session(self) -> Generator[Session]:
-        """Get database session.
+    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
+        """Get async database session.
 
         Yields:
-            Session: SQLAlchemy database session
+            AsyncSession: SQLAlchemy async database session
         """
-        session = self.session_local()
-        try:
-            yield session
-        finally:
-            session.close()
+        async with self.async_session_maker() as session:
+            try:
+                yield session
+            finally:
+                await session.close()
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """Close database connections."""
-        self.engine.dispose()
+        await self.engine.dispose()
 
 
-def get_db(settings: Annotated[Settings, Depends(get_settings)]) -> Generator[Session]:
+async def get_db(settings: Annotated[Settings, Depends(get_settings)]) -> AsyncGenerator[AsyncSession, None]:
     """Get database session dependency.
+
+    This dependency creates a new Database instance per request with its own
+    connection pool. FastAPI's dependency injection ensures proper lifecycle
+    management without needing global state.
 
     Args:
         settings: Application settings
 
     Yields:
-        Session: SQLAlchemy database session
+        AsyncSession: SQLAlchemy async database session
     """
     db = Database(settings)
-    yield from db.get_session()
+    async for session in db.get_session():
+        yield session
+    await db.close()

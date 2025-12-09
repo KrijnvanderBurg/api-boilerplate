@@ -36,14 +36,14 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
 
     # Initialize database
     db = Database(settings)
-    db.create_tables()
+    await db.create_tables()
     logger.info("Database initialized", database_url=settings.database_url)
 
     yield
 
     # Shutdown
     logger.info("Application shutting down")
-    db.close()
+    await db.close()
     logger.info("Database connections closed")
 
 

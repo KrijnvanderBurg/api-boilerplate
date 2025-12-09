@@ -21,7 +21,8 @@ python-multipart = "^0.0.9"
 
 # Database
 sqlalchemy = "^2.0.36"
-psycopg2-binary = "^2.9.10"
+asyncpg = "^0.30.0"
+greenlet = "^3.1.1"
 
 [tool.poetry.group.test.dependencies]
 pre_commit = "*"

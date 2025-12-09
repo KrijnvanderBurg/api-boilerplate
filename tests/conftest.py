@@ -5,7 +5,7 @@ an async test client to avoid event loop issues.
 """
 
 import os
-from typing import Any, Generator
+from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -32,7 +32,7 @@ def postgres_container():
 
 
 @pytest_asyncio.fixture(scope="session")
-def test_db(postgres_container: PostgresContainer) -> Generator[Database, Any, None]:
+async def test_db(postgres_container: PostgresContainer) -> Any:
     """Create a test database using the PostgreSQL container.
 
     Args:
@@ -42,21 +42,24 @@ def test_db(postgres_container: PostgresContainer) -> Generator[Database, Any, N
         Database: The test database instance
     """
     # Set the database URL from the container
-    os.environ["HELLO_WORLD_DATABASE_URL"] = postgres_container.get_connection_url()
+    # Replace psycopg2 driver with asyncpg for async operations
+    container_url = postgres_container.get_connection_url()
+    async_url = container_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
+    os.environ["HELLO_WORLD_DATABASE_URL"] = async_url
 
     # Clear the settings cache and get fresh settings with the new database URL
     get_settings.cache_clear()
     settings = get_settings()
 
     db = Database(settings)
-    db.create_tables()
+    await db.create_tables()
     yield db
-    db.drop_tables()
-    db.close()
+    await db.drop_tables()
+    await db.close()
 
 
 @pytest_asyncio.fixture
-async def client(test_db) -> Generator[AsyncClient, Any, None]:
+async def client(test_db: Database) -> Any:
     """Create an async test client for the API.
 
     This fixture provides an async httpx client for integration tests,
@@ -73,9 +76,6 @@ async def client(test_db) -> Generator[AsyncClient, Any, None]:
         base_url="http://test",
     ) as ac:
         yield ac
-    # Clean up database between tests
-    test_db.drop_tables()
-    test_db.create_tables()
 
 
 pytest_plugins: list[str] = []

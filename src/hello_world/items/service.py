@@ -3,7 +3,7 @@
 from uuid import uuid4
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from hello_world.items import schemas
 from hello_world.items.models import Item
@@ -15,15 +15,15 @@ logger = logger_utils.get_logger(__name__)
 class ItemService:
     """Service for managing items with PostgreSQL database.
 
-    This service handles all business logic for items using SQLAlchemy
-    to interact with PostgreSQL database.
+    This service handles all business logic for items using async SQLAlchemy
+    to interact with PostgreSQL database without blocking the event loop.
     """
 
-    def __init__(self, db: Session) -> None:
-        """Initialize the service with database session.
+    def __init__(self, db: AsyncSession) -> None:
+        """Initialize the service with async database session.
 
         Args:
-            db: SQLAlchemy database session
+            db: SQLAlchemy async database session
         """
         self.db = db
 
@@ -43,8 +43,8 @@ class ItemService:
             price=float(item.price),
         )
         self.db.add(db_item)
-        self.db.commit()
-        self.db.refresh(db_item)
+        await self.db.commit()
+        await self.db.refresh(db_item)
         logger.debug("Item created in database", item_id=db_item.id, item_name=db_item.name)
         return schemas.ItemResponse(
             id=db_item.id,
@@ -64,11 +64,12 @@ class ItemService:
             tuple: (list of items, total count)
         """
         # Get total count
-        count_result = self.db.scalar(select(func.count()).select_from(Item))  # pylint: disable=not-callable
+        count_result = await self.db.scalar(select(func.count()).select_from(Item))
         total: int = count_result if count_result is not None else 0
 
         # Get paginated items
-        items = self.db.scalars(select(Item).offset(offset).limit(limit)).all()
+        result = await self.db.execute(select(Item).offset(offset).limit(limit))
+        items = result.scalars().all()
 
         response_items = [
             schemas.ItemResponse(
@@ -92,7 +93,7 @@ class ItemService:
         Returns:
             ItemResponse | None: The item if found, None otherwise
         """
-        db_item = self.db.get(Item, item_id)
+        db_item = await self.db.get(Item, item_id)
         if db_item:
             logger.debug("Item retrieved", item_id=item_id)
             return schemas.ItemResponse(
@@ -113,7 +114,7 @@ class ItemService:
         Returns:
             ItemResponse | None: The updated item if found, None otherwise
         """
-        db_item = self.db.get(Item, item_id)
+        db_item = await self.db.get(Item, item_id)
         if not db_item:
             logger.debug("Item not found for update", item_id=item_id)
             return None
@@ -122,8 +123,8 @@ class ItemService:
         for key, value in update_data.items():
             setattr(db_item, key, value)
 
-        self.db.commit()
-        self.db.refresh(db_item)
+        await self.db.commit()
+        await self.db.refresh(db_item)
         logger.debug("Item updated", item_id=item_id, updates=update_data)
         return schemas.ItemResponse(
             id=db_item.id,
@@ -141,12 +142,12 @@ class ItemService:
         Returns:
             bool: True if item was deleted, False if not found
         """
-        db_item = self.db.get(Item, item_id)
+        db_item = await self.db.get(Item, item_id)
         if not db_item:
             logger.debug("Item not found for deletion", item_id=item_id)
             return False
 
-        self.db.delete(db_item)
-        self.db.commit()
+        await self.db.delete(db_item)
+        await self.db.commit()
         logger.debug("Item deleted", item_id=item_id)
         return True

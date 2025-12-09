@@ -97,8 +97,8 @@ class Settings(BaseSettings):
     environment: str | None = Field(default=None, description="Deployment environment (dev, test, acc, prod)")
     app_version: str = Field(default="0.1.0", description="Application version")
     database_url: str = Field(
-        default="postgresql://postgres:postgres@localhost:5432/hello_world",
-        description="PostgreSQL database connection URL",
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/hello_world",
+        description="PostgreSQL database connection URL with asyncpg driver",
     )
     server_host: str = Field(default="127.0.0.1", description="Server host address")
     server_port: int = Field(default=8000, description="Server port number")

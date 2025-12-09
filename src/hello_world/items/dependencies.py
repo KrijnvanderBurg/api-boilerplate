@@ -8,7 +8,7 @@ a request scope for efficient reuse.
 from typing import Annotated
 
 from fastapi import Depends, Path
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from hello_world.database import get_db
 from hello_world.items import exceptions, schemas, service
@@ -17,16 +17,16 @@ from hello_world.utils import logger as logger_utils
 logger = logger_utils.get_logger(__name__)
 
 
-async def get_item_service(db: Annotated[Session, Depends(get_db)]) -> service.ItemService:
+async def get_item_service(db: Annotated[AsyncSession, Depends(get_db)]) -> service.ItemService:
     """Dependency injection for ItemService.
 
-    Creates a new ItemService instance with the database session for each request.
+    Creates a new ItemService instance with the async database session for each request.
 
     Args:
-        db: Database session dependency
+        db: Async database session dependency
 
     Returns:
-        ItemService: The ItemService instance with database session
+        ItemService: The ItemService instance with async database session
     """
     return service.ItemService(db)
 
