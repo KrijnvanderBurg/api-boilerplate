@@ -20,7 +20,7 @@ services:
             - "4317:4317"    # OTLP gRPC receiver
             - "4318:4318"    # OTLP HTTP receiver
         volumes:
-            - ../../.devcontainer/python-spark/otel-collector/otel-config.yaml:/etc/otel/config.yaml
+            - ./otel-collector/otel-config.yaml:/etc/otel/config.yaml
         command: ["--config=/etc/otel/config.yaml"]
         networks:
             - default
@@ -32,7 +32,7 @@ services:
             - "3200:3200"   # Tempo HTTP API
         volumes:
             - tempo-storage:/var/tempo
-            - ../../.devcontainer/python-spark/tempo/tempo.yaml:/etc/tempo.yaml
+            - ./tempo/tempo.yaml:/etc/tempo.yaml
         command:
             - "-config.file=/etc/tempo.yaml"
         depends_on:
@@ -47,7 +47,7 @@ services:
             - "3100:3100"    # Loki HTTP API
         volumes:
             - loki-storage:/loki
-            - ../../.devcontainer/python-spark/loki/loki-config.yaml:/etc/loki/loki-config.yaml
+            - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml
         command:
             - -config.file=/etc/loki/loki-config.yaml
         depends_on:
