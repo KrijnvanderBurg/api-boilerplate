@@ -25,6 +25,7 @@ class ItemCreate(CustomModel):
     @classmethod
     def name_must_not_be_empty(cls, v: str) -> str:
         """Validate that name is not just whitespace."""
+        _ = cls  # Mark as intentionally unused
         if not v.strip():
             raise ValueError("Name cannot be empty or whitespace")
         return v.strip()
@@ -50,6 +51,7 @@ class ItemUpdate(CustomModel):
     @classmethod
     def name_must_not_be_empty(cls, v: str | None) -> str | None:
         """Validate that name is not just whitespace if provided."""
+        _ = cls  # Mark as intentionally unused
         if v is not None and not v.strip():
             raise ValueError("Name cannot be empty or whitespace")
         return v.strip() if v else None

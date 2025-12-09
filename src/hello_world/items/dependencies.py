@@ -8,29 +8,27 @@ a request scope for efficient reuse.
 from typing import Annotated
 
 from fastapi import Depends, Path
+from sqlalchemy.orm import Session
 
+from hello_world.database import get_db
 from hello_world.items import exceptions, schemas, service
 from hello_world.utils import logger as logger_utils
 
 logger = logger_utils.get_logger(__name__)
 
-# Singleton service instance for in-memory storage
-_item_service_instance: service.ItemService | None = None
 
-
-async def get_item_service() -> service.ItemService:
+async def get_item_service(db: Annotated[Session, Depends(get_db)]) -> service.ItemService:
     """Dependency injection for ItemService.
 
-    Returns a singleton instance to maintain in-memory state across requests.
-    For production use with a database, this would create a new instance per request.
+    Creates a new ItemService instance with the database session for each request.
+
+    Args:
+        db: Database session dependency
 
     Returns:
-        ItemService: The singleton ItemService instance
+        ItemService: The ItemService instance with database session
     """
-    global _item_service_instance
-    if _item_service_instance is None:
-        _item_service_instance = service.ItemService()
-    return _item_service_instance
+    return service.ItemService(db)
 
 
 async def valid_item_id(

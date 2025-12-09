@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, status
 
-from hello_world.config import get_config
+from hello_world.settings import get_settings
 
 router = APIRouter(prefix="/health", tags=["health"])
 
@@ -28,10 +28,10 @@ router = APIRouter(prefix="/health", tags=["health"])
 )
 async def health_check() -> dict[str, str]:
     """Health check endpoint."""
-    config = get_config()
+    settings = get_settings()
     return {
         "status": "healthy",
-        "environment": config.environment,
+        "environment": settings.environment or "local",
     }
 
 

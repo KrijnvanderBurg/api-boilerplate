@@ -11,6 +11,8 @@ from zoneinfo import ZoneInfo
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict
 
+from hello_world.models.item import Item  # pylint: disable=no-name-in-module
+
 
 def datetime_to_gmt_str(dt: datetime) -> str:
     """Convert datetime to GMT string format.
@@ -71,4 +73,4 @@ class CustomModel(BaseModel):
         return jsonable_encoder(default_dict)
 
 
-__all__ = ["CustomModel", "datetime_to_gmt_str"]
+__all__ = ["CustomModel", "datetime_to_gmt_str", "Item"]

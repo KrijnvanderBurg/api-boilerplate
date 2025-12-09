@@ -1,57 +1,63 @@
 """Entry point for the application."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 import uvicorn
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from hello_world.config import get_config
+from hello_world.database import Database
 from hello_world.exceptions import HelloWorldError
 from hello_world.health import router as health_router
 from hello_world.items import exceptions as item_exceptions
 from hello_world.items import router as items_router
+from hello_world.settings import get_settings
 from hello_world.utils import logger as logger_utils
 
 logger = logger_utils.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     """Handle application lifespan events.
 
     This context manager handles startup and shutdown events for the application.
     Use this to initialize resources on startup and clean them up on shutdown.
 
-    Args:
-        app: The FastAPI application instance
-
     Yields:
         None: Control during the application's lifetime
     """
     # Startup
-    config = get_config()
+    settings = get_settings()
     logger.info(
         "Application starting",
-        environment=config.environment,
-        version=config.app_version,
+        environment=settings.environment,
+        version=settings.app_version,
     )
+
+    # Initialize database
+    db = Database(settings)
+    db.create_tables()
+    logger.info("Database initialized", database_url=settings.database_url)
+
     yield
+
     # Shutdown
     logger.info("Application shutting down")
+    db.close()
+    logger.info("Database connections closed")
 
 
 # Get configuration for environment-based settings
-config = get_config()
-app_configs = {
-    "title": "Hello World API",
-    "description": "A production-ready FastAPI boilerplate with best practices",
-    "version": config.app_version,
-    "lifespan": lifespan,
-}
+_settings = get_settings()
 
-app = FastAPI(**app_configs)
+app = FastAPI(
+    title="Hello World API",
+    description="A production-ready FastAPI boilerplate with best practices",
+    version=_settings.app_version,
+    lifespan=lifespan,
+)
 
 
 # Exception handlers
@@ -192,6 +198,7 @@ async def root() -> dict[str, str]:
     """
     return {
         "message": "Hello World API",
+        "docs": "/docs",
         "health": "/health",
     }
 
@@ -202,10 +209,11 @@ app.include_router(items_router.router)
 
 
 if __name__ == "__main__":  # pragma: no cover
+    app_settings = get_settings()
     uvicorn.run(
         "hello_world.main:app",
-        host="0.0.0.0",
-        port=8000,
+        host=app_settings.server_host,
+        port=app_settings.server_port,
         reload=False,
         log_level="info",
     )

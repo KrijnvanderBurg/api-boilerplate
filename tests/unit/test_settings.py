@@ -1,34 +1,34 @@
 """Tests for application settings module.
 
-These tests verify AppSettings validation, singleton behavior, environment
+These tests verify Settings validation, singleton behavior, environment
 variable loading, caching mechanism, and settings access patterns.
 """
 
 import os
 from unittest.mock import patch
 
-from hello_world.settings import AppSettings, get_settings
+from hello_world.settings import Settings, get_settings
 
 
-class TestAppSettingsValidation:
-    """Test AppSettings model validation and instantiation."""
+class TestSettingsValidation:
+    """Test Settings model validation and instantiation."""
 
     def test_default_log_level(self) -> None:
         """Verify default log level is None when no environment variable is set."""
         with patch.dict(os.environ, {}, clear=True):
-            settings = AppSettings()
+            settings = Settings()
             assert settings.log_level is None
 
     def test_log_level_from_env_uppercase(self) -> None:
         """Verify log level is loaded from HELLO_WORLD_LOG_LEVEL environment variable."""
         with patch.dict(os.environ, {"HELLO_WORLD_LOG_LEVEL": "DEBUG"}, clear=True):
-            settings = AppSettings()
+            settings = Settings()
             assert settings.log_level == "DEBUG"
 
     def test_log_level_from_env_lowercase(self) -> None:
         """Verify log level is loaded from environment as-is."""
         with patch.dict(os.environ, {"HELLO_WORLD_LOG_LEVEL": "debug"}, clear=True):
-            settings = AppSettings()
+            settings = Settings()
             assert settings.log_level == "debug"
 
     def test_log_level_all_valid_values(self) -> None:
@@ -36,13 +36,13 @@ class TestAppSettingsValidation:
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         for level in valid_levels:
             with patch.dict(os.environ, {"HELLO_WORLD_LOG_LEVEL": level}, clear=True):
-                settings = AppSettings()
+                settings = Settings()
                 assert settings.log_level == level
 
     def test_invalid_log_level_accepted(self) -> None:
         """Verify settings accepts any log level string (validation happens in logger)."""
         with patch.dict(os.environ, {"HELLO_WORLD_LOG_LEVEL": "INVALID"}, clear=True):
-            settings = AppSettings()
+            settings = Settings()
             assert settings.log_level == "INVALID"
 
     def test_extra_env_vars_ignored(self) -> None:
@@ -50,7 +50,7 @@ class TestAppSettingsValidation:
         with patch.dict(
             os.environ, {"HELLO_WORLD_LOG_LEVEL": "INFO", "HELLO_WORLD_UNKNOWN_SETTING": "value"}, clear=True
         ):
-            settings = AppSettings()
+            settings = Settings()
             assert settings.log_level == "INFO"
             assert not hasattr(settings, "unknown_setting")
 
@@ -126,7 +126,7 @@ class TestSettingsEnvironmentVariables:
         """Verify settings only load from HELLO_WORLD_ prefixed environment variables."""
         get_settings.cache_clear()
         with patch.dict(os.environ, {"LOG_LEVEL": "DEBUG", "HELLO_WORLD_LOG_LEVEL": "INFO"}, clear=True):
-            settings = AppSettings()
+            settings = Settings()
             # HELLO_WORLD_LOG_LEVEL takes precedence
             assert settings.log_level == "INFO"
 
@@ -134,5 +134,5 @@ class TestSettingsEnvironmentVariables:
         """Verify settings work without .env file present."""
         get_settings.cache_clear()
         with patch.dict(os.environ, {"HELLO_WORLD_LOG_LEVEL": "WARNING"}, clear=True):
-            settings = AppSettings()
+            settings = Settings()
             assert settings.log_level == "WARNING"

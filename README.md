@@ -40,7 +40,7 @@ A production-ready FastAPI boilerplate implementing industry best practices for 
 ```
 src/hello_world/
 ├── __init__.py           # Package initialization
-├── __main__.py           # Application entry point with middleware & handlers
+├── main.py           # Application entry point with middleware & handlers
 ├── dependencies.py       # Dependency injection providers
 ├── exceptions.py         # Custom exception classes
 ├── settings.py          # Configuration management
@@ -93,7 +93,7 @@ export HELLO_WORLD_DEBUG=true
 - **Application Settings** (env vars): Log level, environment, debug mode - things that vary by deployment environment
 - **Deployment Configuration** (code/CLI): API prefix, CORS origins, host, port - things that are typically fixed per deployment or set via CLI/orchestration
 
-To configure CORS origins, edit `API_PREFIX` and `CORS_ORIGINS` constants in `src/hello_world/__main__.py`:
+To configure CORS origins, edit `API_PREFIX` and `CORS_ORIGINS` constants in `src/hello_world/main.py`:
 ```python
 API_PREFIX = "/api/v1"
 CORS_ORIGINS = ["http://localhost:3000", "https://your-domain.com"]
@@ -102,7 +102,7 @@ CORS_ORIGINS = ["http://localhost:3000", "https://your-domain.com"]
 To configure host/port at runtime:
 ```bash
 # Via CLI arguments to uvicorn
-uvicorn hello_world.__main__:app --host 0.0.0.0 --port 8080
+uvicorn hello_world.main:app --host 0.0.0.0 --port 8080
 
 # Or when running the module
 python -m hello_world  # Uses defaults: 0.0.0.0:8000

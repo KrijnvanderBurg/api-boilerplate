@@ -29,7 +29,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class AppSettings(BaseSettings):
+class Settings(BaseSettings):
     """Application-wide settings loaded from environment variables.
 
     Provides centralized configuration management for the Api framework with
@@ -95,10 +95,17 @@ class AppSettings(BaseSettings):
 
     log_level: str | None = Field(default=None, description="Logging level of the system")
     environment: str | None = Field(default=None, description="Deployment environment (dev, test, acc, prod)")
+    app_version: str = Field(default="0.1.0", description="Application version")
+    database_url: str = Field(
+        default="postgresql://postgres:postgres@localhost:5432/hello_world",
+        description="PostgreSQL database connection URL",
+    )
+    server_host: str = Field(default="127.0.0.1", description="Server host address")
+    server_port: int = Field(default=8000, description="Server port number")
 
 
 @lru_cache
-def get_settings() -> AppSettings:
+def get_settings() -> Settings:
     """Retrieve the singleton application settings instance.
 
     Returns a cached AppSettings instance using the singleton pattern. On first
@@ -111,7 +118,7 @@ def get_settings() -> AppSettings:
     and ensures all parts of the application use the same configuration.
 
     Returns:
-        AppSettings: The singleton AppSettings instance with all configuration
+        Settings: The singleton Settings instance with all configuration
             loaded from environment variables and validated by Pydantic. All
             attributes are populated from HELLO_WORLD_* environment variables.
 
@@ -169,4 +176,4 @@ def get_settings() -> AppSettings:
         AppSettings: The settings class with detailed attribute documentation
         lru_cache: Python's functools decorator used for caching
     """
-    return AppSettings()
+    return Settings()

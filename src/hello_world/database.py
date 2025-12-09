@@ -1,39 +1,67 @@
-"""Database configuration and connection management.
+"""Database configuration and connection management."""
 
-This module handles database connections and provides naming conventions
-for database objects following FastAPI best practices.
+from collections.abc import Generator
+from typing import Annotated
 
-Database Naming Conventions:
-    - Use lowercase_snake_case for all names
-    - Use singular form (e.g., 'post', 'post_like', 'user_playlist')
-    - Group similar tables with module prefix (e.g., 'payment_account', 'payment_bill')
-    - Stay consistent with column names across tables:
-        * Use 'profile_id' in all tables
-        * Use concrete naming when appropriate (e.g., 'creator_id' for creator profiles)
-    - Use '_at' suffix for datetime fields (e.g., 'created_at', 'updated_at')
-    - Use '_date' suffix for date fields (e.g., 'birth_date', 'start_date')
+from fastapi import Depends
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-Index Naming Conventions:
-    - ix: column_0_label_idx
-    - uq: table_name_column_0_name_key
-    - ck: table_name_constraint_name_check
-    - fk: table_name_column_0_name_fkey
-    - pk: table_name_pkey
+from hello_world.settings import Settings, get_settings
 
-Example Table Structure:
-    ```python
-    class Post(Base):
-        __tablename__ = "post"
 
-        id = Column(UUID, primary_key=True)
-        title = Column(String, nullable=False)
-        content = Column(Text)
-        creator_id = Column(UUID, ForeignKey("profile.id"))
-        created_at = Column(DateTime, nullable=False)
-        updated_at = Column(DateTime)
-        published_date = Column(Date)
-    ```
-"""
+class Base(DeclarativeBase):
+    """Base class for all SQLAlchemy models."""
 
-# Database naming conventions would be configured here when using SQLAlchemy
-# For now, this serves as documentation for the naming standards
+
+class Database:
+    """Database connection manager."""
+
+    def __init__(self, settings: Settings) -> None:
+        """Initialize database with settings.
+
+        Args:
+            settings: Application settings containing database configuration
+        """
+        self.engine = create_engine(
+            settings.database_url,
+            pool_pre_ping=True,
+        )
+        self.session_local = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+
+    def create_tables(self) -> None:
+        """Create all database tables."""
+        Base.metadata.create_all(bind=self.engine)
+
+    def drop_tables(self) -> None:
+        """Drop all database tables."""
+        Base.metadata.drop_all(bind=self.engine)
+
+    def get_session(self) -> Generator[Session]:
+        """Get database session.
+
+        Yields:
+            Session: SQLAlchemy database session
+        """
+        session = self.session_local()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    def close(self) -> None:
+        """Close database connections."""
+        self.engine.dispose()
+
+
+def get_db(settings: Annotated[Settings, Depends(get_settings)]) -> Generator[Session]:
+    """Get database session dependency.
+
+    Args:
+        settings: Application settings
+
+    Yields:
+        Session: SQLAlchemy database session
+    """
+    db = Database(settings)
+    yield from db.get_session()
