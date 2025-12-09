@@ -95,6 +95,7 @@ class AppSettings(BaseSettings):
 
     log_level: str | None = Field(default=None, description="Logging level of the system")
     environment: str | None = Field(default=None, description="Deployment environment (dev, test, acc, prod)")
+    debug: bool = Field(default=False, description="Enable debug mode")
 
 
 @lru_cache
