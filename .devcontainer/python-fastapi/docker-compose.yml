@@ -30,6 +30,7 @@ services:
         platform: linux/amd64
         ports:
             - "3200:3200"   # Tempo HTTP API
+            - "4318:4318"   # OTLP HTTP
         volumes:
             - tempo-storage:/var/tempo
             - ./tempo/tempo.yaml:/etc/tempo.yaml
