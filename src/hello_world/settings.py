@@ -96,11 +96,6 @@ class AppSettings(BaseSettings):
     log_level: str | None = Field(default=None, description="Logging level of the system")
     environment: str | None = Field(default=None, description="Deployment environment (dev, test, acc, prod)")
 
-    # OpenTelemetry configuration
-    otel_service_name: str = Field(default="hello-world-api", description="Service name for OpenTelemetry traces")
-    otel_exporter_otlp_endpoint: str | None = Field(default=None, description="OTLP exporter endpoint URL")
-    otel_enabled: bool = Field(default=True, description="Enable/disable OpenTelemetry instrumentation")
-
 
 @lru_cache
 def get_settings() -> AppSettings:

@@ -2,7 +2,6 @@
 
 import uvicorn
 from fastapi import FastAPI
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 from hello_world.routers import health, items
 from hello_world.settings import get_settings
@@ -19,10 +18,6 @@ app = FastAPI(
 # Include routers
 app.include_router(health.router, tags=["health"])
 app.include_router(items.router, tags=["items"])
-
-# Instrument FastAPI with OpenTelemetry
-if settings.otel_enabled:
-    FastAPIInstrumentor.instrument_app(app, excluded_urls="health")
 
 
 if __name__ == "__main__":  # pragma: no cover

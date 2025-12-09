@@ -1,0 +1,199 @@
+{
+  "dashboard": {
+    "title": "FastAPI Observability",
+    "uid": "fastapi-observability",
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "refresh": "5s",
+    "panels": [
+      {
+        "id": 1,
+        "type": "timeseries",
+        "title": "Request Rate",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "tempo", "uid": "tempo" },
+            "queryType": "traceql",
+            "query": "{ span.http.method != nil } | rate()"
+          }
+        ],
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom" }
+        }
+      },
+      {
+        "id": 2,
+        "type": "stat",
+        "title": "Total Requests",
+        "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "tempo", "uid": "tempo" },
+            "queryType": "traceql",
+            "query": "{ span.http.method != nil }"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["count"]
+          }
+        }
+      },
+      {
+        "id": 3,
+        "type": "stat",
+        "title": "Error Rate",
+        "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "tempo", "uid": "tempo" },
+            "queryType": "traceql",
+            "query": "{ status = error }"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["count"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 1, "color": "yellow" },
+                { "value": 10, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "type": "timeseries",
+        "title": "Response Time (p50, p95, p99)",
+        "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "tempo", "uid": "tempo" },
+            "queryType": "traceql",
+            "query": "{ span.http.method != nil } | quantile_over_time(duration, 0.5) by (span.http.route)"
+          },
+          {
+            "refId": "B",
+            "datasource": { "type": "tempo", "uid": "tempo" },
+            "queryType": "traceql",
+            "query": "{ span.http.method != nil } | quantile_over_time(duration, 0.95) by (span.http.route)"
+          },
+          {
+            "refId": "C",
+            "datasource": { "type": "tempo", "uid": "tempo" },
+            "queryType": "traceql",
+            "query": "{ span.http.method != nil } | quantile_over_time(duration, 0.99) by (span.http.route)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "type": "table",
+        "title": "Endpoint Breakdown",
+        "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "tempo", "uid": "tempo" },
+            "queryType": "traceql",
+            "query": "{ span.http.method != nil } | by(span.http.route, span.http.method, span.http.status_code)"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "span.http.route": "Route",
+                "span.http.method": "Method",
+                "span.http.status_code": "Status"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "type": "traces",
+        "title": "Recent Traces",
+        "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "tempo", "uid": "tempo" },
+            "queryType": "traceql",
+            "query": "{ span.http.method != nil }",
+            "limit": 20
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "type": "timeseries",
+        "title": "Requests by Endpoint",
+        "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "tempo", "uid": "tempo" },
+            "queryType": "traceql",
+            "query": "{ span.http.method != nil } | rate() by (span.http.route)"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "type": "timeseries",
+        "title": "Requests by Status Code",
+        "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "refId": "A",
+            "datasource": { "type": "tempo", "uid": "tempo" },
+            "queryType": "traceql",
+            "query": "{ span.http.method != nil } | rate() by (span.http.status_code)"
+          }
+        ],
+        "fieldConfig": {
+          "overrides": [
+            {
+              "matcher": { "id": "byRegexp", "options": "/2.*/" },
+              "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/4.*/" },
+              "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }]
+            },
+            {
+              "matcher": { "id": "byRegexp", "options": "/5.*/" },
+              "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "overwrite": true
+}
