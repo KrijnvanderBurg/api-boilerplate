@@ -7,11 +7,14 @@ import uvicorn
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from hello_world.exceptions import HelloWorldError, ItemAlreadyExistsError, ItemNotFoundError, ItemValidationError
-from hello_world.routers import health, items
-from hello_world.utils.logger import get_logger
+from hello_world.config import get_config
+from hello_world.exceptions import HelloWorldError
+from hello_world.health import router as health_router
+from hello_world.items import exceptions as item_exceptions
+from hello_world.items import router as items_router
+from hello_world.utils import logger as logger_utils
 
-logger = get_logger(__name__)
+logger = logger_utils.get_logger(__name__)
 
 
 @asynccontextmanager
@@ -28,21 +31,32 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         None: Control during the application's lifetime
     """
     # Startup
+    config = get_config()
+    logger.info(
+        "Application starting",
+        environment=config.environment,
+        version=config.app_version,
+    )
     yield
     # Shutdown
+    logger.info("Application shutting down")
 
 
-app = FastAPI(
-    title="Hello World API",
-    description="A production-ready FastAPI boilerplate with best practices",
-    version="0.1.0",
-    lifespan=lifespan,
-)
+# Get configuration for environment-based settings
+config = get_config()
+app_configs = {
+    "title": "Hello World API",
+    "description": "A production-ready FastAPI boilerplate with best practices",
+    "version": config.app_version,
+    "lifespan": lifespan,
+}
+
+app = FastAPI(**app_configs)
 
 
 # Exception handlers
-@app.exception_handler(ItemNotFoundError)
-async def item_not_found_handler(request: Request, exc: ItemNotFoundError) -> JSONResponse:
+@app.exception_handler(item_exceptions.ItemNotFoundError)
+async def item_not_found_handler(request: Request, exc: item_exceptions.ItemNotFoundError) -> JSONResponse:
     """Handle ItemNotFoundError exceptions.
 
     Args:
@@ -66,8 +80,8 @@ async def item_not_found_handler(request: Request, exc: ItemNotFoundError) -> JS
     )
 
 
-@app.exception_handler(ItemValidationError)
-async def item_validation_error_handler(request: Request, exc: ItemValidationError) -> JSONResponse:
+@app.exception_handler(item_exceptions.ItemValidationError)
+async def item_validation_error_handler(request: Request, exc: item_exceptions.ItemValidationError) -> JSONResponse:
     """Handle ItemValidationError exceptions.
 
     Args:
@@ -91,8 +105,8 @@ async def item_validation_error_handler(request: Request, exc: ItemValidationErr
     )
 
 
-@app.exception_handler(ItemAlreadyExistsError)
-async def item_already_exists_handler(request: Request, exc: ItemAlreadyExistsError) -> JSONResponse:
+@app.exception_handler(item_exceptions.ItemAlreadyExistsError)
+async def item_already_exists_handler(request: Request, exc: item_exceptions.ItemAlreadyExistsError) -> JSONResponse:
     """Handle ItemAlreadyExistsError exceptions.
 
     Args:
@@ -170,7 +184,7 @@ async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse
 
 # Root endpoint
 @app.get("/", include_in_schema=False)
-def root() -> dict[str, str]:
+async def root() -> dict[str, str]:
     """Root endpoint redirect info.
 
     Returns:
@@ -178,19 +192,18 @@ def root() -> dict[str, str]:
     """
     return {
         "message": "Hello World API",
-        "docs": "/docs",
         "health": "/health",
     }
 
 
 # Include routers
-app.include_router(health.router, tags=["health"])
-app.include_router(items.router, tags=["items"])
+app.include_router(health_router.router)
+app.include_router(items_router.router)
 
 
 if __name__ == "__main__":  # pragma: no cover
     uvicorn.run(
-        "hello_world.__main__:app",
+        "hello_world.main:app",
         host="0.0.0.0",
         port=8000,
         reload=False,
