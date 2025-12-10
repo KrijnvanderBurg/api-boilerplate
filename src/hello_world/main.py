@@ -68,7 +68,7 @@ async def root() -> dict[str, Any]:
                 "description": "Health check endpoint",
             },
             "items": {
-                "list_items": {
+                "read_items": {
                     "url": "/items/",
                     "method": "GET",
                     "description": "List all items with pagination",
@@ -78,7 +78,7 @@ async def root() -> dict[str, Any]:
                     "method": "POST",
                     "description": "Create a new item",
                 },
-                "get_item": {
+                "read_item": {
                     "url": "/items/{item_id}",
                     "method": "GET",
                     "description": "Get a specific item by ID",

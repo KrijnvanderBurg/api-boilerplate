@@ -157,12 +157,12 @@ Once running, access interactive documentation at:
 ### 1. Dependency Injection
 ```python
 from fastapi import Depends
-from hello_world.dependencies import get_item_service
+from hello_world.dependencies import read_item_service
 
 @router.post("/items")
 def create_item(
     item: ItemCreate,
-    service: ItemService = Depends(get_item_service)
+    service: ItemService = Depends(read_item_service)
 ) -> Item:
     return service.create_item(item)
 ```

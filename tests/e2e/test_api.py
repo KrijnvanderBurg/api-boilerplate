@@ -104,7 +104,7 @@ class TestItemsEndpoints:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_list_items_empty(self, client: AsyncClient) -> None:
+    async def test_read_items_empty(self, client: AsyncClient) -> None:
         """Test listing items when none exist."""
         response = await client.get("/items")
         assert response.status_code == 200
@@ -113,7 +113,7 @@ class TestItemsEndpoints:
         assert isinstance(data["items"], list)
 
     @pytest.mark.asyncio
-    async def test_list_items_with_data(self, client: AsyncClient) -> None:
+    async def test_read_items_with_data(self, client: AsyncClient) -> None:
         """Test listing items after creating some."""
         # Create items
         items_to_create = [
@@ -133,7 +133,7 @@ class TestItemsEndpoints:
         assert len(data["items"]) >= len(items_to_create)
 
     @pytest.mark.asyncio
-    async def test_get_item_by_id(self, client: AsyncClient) -> None:
+    async def test_read_item_by_id(self, client: AsyncClient) -> None:
         """Test retrieving a specific item by ID."""
         # Create an item
         item_data = {"name": "Specific Item", "price": 15.99}
@@ -150,7 +150,7 @@ class TestItemsEndpoints:
         assert data["price"] == item_data["price"]
 
     @pytest.mark.asyncio
-    async def test_get_item_not_found(self, client: AsyncClient) -> None:
+    async def test_read_item_not_found(self, client: AsyncClient) -> None:
         """Test retrieving a non-existent item."""
         response = await client.get("/items/nonexistent-id")
         assert response.status_code == 404
@@ -161,37 +161,20 @@ class TestItemsEndpoints:
     async def test_update_item_success(self, client: AsyncClient) -> None:
         """Test updating an item successfully."""
         # Create an item
-        item_data = {"name": "Original Name", "price": 25.00}
-        create_response = await client.post("/items", json=item_data)
-        created_item = create_response.json()
-        item_id = created_item["id"]
-
-        # Update the item
-        update_data = {"name": "Updated Name", "price": 30.00}
-        response = await client.put(f"/items/{item_id}", json=update_data)
-        assert response.status_code == 200
-        data = response.json()
-        assert data["id"] == item_id
-        assert data["name"] == update_data["name"]
-        assert data["price"] == update_data["price"]
-
-    @pytest.mark.asyncio
-    async def test_update_item_partial(self, client: AsyncClient) -> None:
-        """Test partial update of an item."""
-        # Create an item
         item_data = {"name": "Original", "description": "Original description", "price": 20.00}
         create_response = await client.post("/items", json=item_data)
         created_item = create_response.json()
         item_id = created_item["id"]
 
-        # Partial update (only name)
-        update_data = {"name": "Updated Name Only"}
+        # Update the item
+        update_data = {"name": "Updated Name", "description": "Updated description", "price": 25.00}
         response = await client.put(f"/items/{item_id}", json=update_data)
         assert response.status_code == 200
         data = response.json()
+        assert data["id"] == item_id
         assert data["name"] == update_data["name"]
-        assert data["description"] == item_data["description"]  # Unchanged
-        assert data["price"] == item_data["price"]  # Unchanged
+        assert data["description"] == update_data["description"]
+        assert data["price"] == update_data["price"]
 
     @pytest.mark.asyncio
     async def test_update_item_not_found(self, client: AsyncClient) -> None:

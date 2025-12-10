@@ -32,10 +32,9 @@ class ItemCreate(CustomModel):
 
 
 class ItemUpdate(CustomModel):
-    """Schema for updating an item (all fields optional)."""
+    """Schema for updating an item (all fields required)."""
 
-    name: str | None = Field(
-        default=None,
+    name: str = Field(
         min_length=constants.ITEM_NAME_MIN_LENGTH,
         max_length=constants.ITEM_NAME_MAX_LENGTH,
         description="Item name",
@@ -45,16 +44,16 @@ class ItemUpdate(CustomModel):
         max_length=constants.ITEM_DESCRIPTION_MAX_LENGTH,
         description="Item description",
     )
-    price: float | None = Field(default=None, ge=constants.ITEM_PRICE_MIN, description="Item price (must be positive)")
+    price: float = Field(ge=constants.ITEM_PRICE_MIN, description="Item price (must be positive)")
 
     @field_validator("name")
     @classmethod
-    def name_must_not_be_empty(cls, v: str | None) -> str | None:
-        """Validate that name is not just whitespace if provided."""
+    def name_must_not_be_empty(cls, v: str) -> str:
+        """Validate that name is not just whitespace."""
         _ = cls  # Mark as intentionally unused
-        if v is not None and not v.strip():
+        if not v.strip():
             raise ValueError("Name cannot be empty or whitespace")
-        return v.strip() if v else None
+        return v.strip()
 
 
 class ItemResponse(ItemCreate):

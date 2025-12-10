@@ -76,7 +76,7 @@
 				"nwgh.bandit", // https://marketplace.visualstudio.com/items?itemName=nwgh.bandit
 				// Tools
 				"ms-azuretools.vscode-docker", // https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker
-				"eamodio.gitlens", // https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens
+				// "eamodio.gitlens", // https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens
 				"dvirtz.parquet-viewer", // https://marketplace.visualstudio.com/items?itemName=dvirtz.parquet-viewer
 				"tamasfe.even-better-toml", // https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml
 				"ms-azure-devops.azuredevops", // https://marketplace.visualstudio.com/items?itemName=ms-azure-devops.azuredevops

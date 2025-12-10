@@ -32,8 +32,8 @@ class ItemService:
         await self.db.refresh(db_item)
         return schemas.ItemResponse.model_validate(db_item)
 
-    async def list_items(self, limit: int = 10, offset: int = 0) -> tuple[list[schemas.ItemResponse], int]:
-        """List all items with pagination."""
+    async def read_items(self, limit: int = 10, offset: int = 0) -> tuple[list[schemas.ItemResponse], int]:
+        """Read all items with pagination."""
         count_result = await self.db.scalar(select(func.count(Item.id)))
         total: int = count_result if count_result is not None else 0
 
@@ -41,24 +41,24 @@ class ItemService:
         items = [schemas.ItemResponse.model_validate(item) for item in result.scalars().all()]
         return items, total
 
-    async def get_item(self, item_id: str) -> schemas.ItemResponse | None:
-        """Get an item by ID."""
+    async def read_item(self, item_id: str) -> schemas.ItemResponse | None:
+        """Read an item by ID."""
         db_item = await self.db.get(Item, item_id)
         return schemas.ItemResponse.model_validate(db_item) if db_item else None
 
     async def update_item(self, item_id: str, item_update: schemas.ItemUpdate) -> schemas.ItemResponse | None:
         """Update an item."""
-        db_item = await self.db.get(Item, item_id)
-        if not db_item:
+        existing_item = await self.db.get(Item, item_id)
+        if not existing_item:
             return None
 
-        update_data = item_update.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(db_item, key, value)
+        existing_item.name = item_update.name
+        existing_item.description = item_update.description
+        existing_item.price = float(item_update.price)
 
         await self.db.commit()
-        await self.db.refresh(db_item)
-        return schemas.ItemResponse.model_validate(db_item)
+        await self.db.refresh(existing_item)
+        return schemas.ItemResponse.model_validate(existing_item)
 
     async def delete_item(self, item_id: str) -> bool:
         """Delete an item."""
