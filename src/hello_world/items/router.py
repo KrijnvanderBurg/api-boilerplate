@@ -12,12 +12,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse, Response
 
+from hello_world import logger
 from hello_world.items import dependencies, schemas
 from hello_world.pagination import PaginatedResponse, PaginationParams, paginate
-from hello_world.utils import logger as logger_utils
 
 router = APIRouter(prefix="/items", tags=["items"])
-logger = logger_utils.get_logger(__name__)
+logger = logger.get_logger(__name__)
 
 
 # Exception handlers for items domain
