@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 import uvicorn
 from fastapi import FastAPI
@@ -22,11 +23,7 @@ logger = get_logger(__name__)
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     """Handle application lifespan events."""
     # Startup
-    logger.info(
-        "Application starting",
-        environment=settings.environment,
-        version=settings.app_version,
-    )
+    logger.info("Application starting", environment=settings.environment, version=settings.app_version)
 
     Database.initialize(settings)
     await Database.create_tables()
@@ -56,7 +53,56 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register exception handlers from items router (handlers defined in items/router.py for locality)
+
+@app.get("/", include_in_schema=False)
+async def root() -> dict[str, Any]:
+    """Root endpoint."""
+    return {
+        "message": "Hello World API",
+        "version": settings.app_version,
+        "environment": settings.environment,
+        "endpoints": {
+            "health": {
+                "url": "/health",
+                "method": "GET",
+                "description": "Health check endpoint",
+            },
+            "items": {
+                "list_items": {
+                    "url": "/items/",
+                    "method": "GET",
+                    "description": "List all items with pagination",
+                },
+                "create_item": {
+                    "url": "/items/",
+                    "method": "POST",
+                    "description": "Create a new item",
+                },
+                "get_item": {
+                    "url": "/items/{item_id}",
+                    "method": "GET",
+                    "description": "Get a specific item by ID",
+                },
+                "update_item": {
+                    "url": "/items/{item_id}",
+                    "method": "PUT",
+                    "description": "Update an existing item",
+                },
+                "delete_item": {
+                    "url": "/items/{item_id}",
+                    "method": "DELETE",
+                    "description": "Delete an item",
+                },
+            },
+        },
+    }
+
+
+# Include routers
+app.include_router(health_router.router)
+app.include_router(items_router.router)
+
+# Register exception handlers
 app.add_exception_handler(
     item_exceptions.ItemNotFoundError,
     items_router.item_not_found_handler,
@@ -69,21 +115,6 @@ app.add_exception_handler(
     item_exceptions.ItemAlreadyExistsError,
     items_router.item_already_exists_handler,
 )
-
-
-@app.get("/", include_in_schema=False)
-async def root() -> dict[str, str]:
-    """Root endpoint."""
-    return {
-        "message": "Hello World API",
-        "docs": "/docs",
-        "health": "/health",
-    }
-
-
-# Include routers
-app.include_router(health_router.router)
-app.include_router(items_router.router)
 
 
 if __name__ == "__main__":  # pragma: no cover

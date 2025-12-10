@@ -11,7 +11,7 @@ from hello_world.items.models import Item
 from hello_world.logger import get_logger
 from hello_world.pagination import PaginatedResponse, PaginationParams, paginate
 
-router = APIRouter(prefix="/items", tags=["items"])
+router = APIRouter(tags=["items"])
 logger = get_logger(__name__)
 
 
@@ -44,7 +44,7 @@ async def item_already_exists_handler(request: Request, exc: Exception) -> Respo
 
 
 @router.post(
-    "",
+    "/items",
     status_code=status.HTTP_201_CREATED,
     response_model=schemas.ItemResponse,
     summary="Create a new item",
@@ -63,7 +63,7 @@ async def create_item(
 
 
 @router.get(
-    "",
+    "/items",
     response_model=PaginatedResponse[schemas.ItemResponse],
     summary="List all items",
     responses={
@@ -85,7 +85,7 @@ async def list_items(
 
 
 @router.get(
-    "/{item_id}",
+    "/items/{item_id}",
     response_model=schemas.ItemResponse,
     summary="Get an item by ID",
     responses={
@@ -101,7 +101,7 @@ async def get_item(
 
 
 @router.put(
-    "/{item_id}",
+    "/items/{item_id}",
     response_model=schemas.ItemResponse,
     summary="Update an item",
     responses={
@@ -123,7 +123,7 @@ async def update_item(
 
 
 @router.delete(
-    "/{item_id}",
+    "/items/{item_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete an item",
     responses={
