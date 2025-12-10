@@ -64,7 +64,7 @@ class ItemService:
             tuple: (list of items, total count)
         """
         # Get total count
-        count_result = await self.db.scalar(select(func.count()).select_from(Item))
+        count_result = await self.db.scalar(select(func.count(Item.id)))
         total: int = count_result if count_result is not None else 0
 
         # Get paginated items

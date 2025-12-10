@@ -57,7 +57,7 @@ class Database:
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
 
-    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
+    async def get_session(self) -> AsyncGenerator[AsyncSession]:
         """Get async database session.
 
         Yields:
@@ -74,7 +74,7 @@ class Database:
         await self.engine.dispose()
 
 
-async def get_db(settings: Annotated[Settings, Depends(get_settings)]) -> AsyncGenerator[AsyncSession, None]:
+async def get_db(settings: Annotated[Settings, Depends(get_settings)]) -> AsyncGenerator[AsyncSession]:
     """Get database session dependency.
 
     This dependency creates a new Database instance per request with its own
