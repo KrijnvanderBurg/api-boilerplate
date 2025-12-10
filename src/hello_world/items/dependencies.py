@@ -10,11 +10,11 @@ from typing import Annotated
 from fastapi import Depends, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hello_world import logger
 from hello_world.database import get_db
 from hello_world.items import exceptions, schemas, service
+from hello_world.logger import get_logger
 
-logger = logger.get_logger(__name__)
+logger = get_logger(__name__)
 
 
 async def get_item_service(db: Annotated[AsyncSession, Depends(get_db)]) -> service.ItemService:

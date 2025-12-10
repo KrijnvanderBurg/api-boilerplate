@@ -2,7 +2,7 @@
 
 import logging
 
-from hello_world.utils.logger import get_logger, set_logger
+from hello_world.logger import get_logger, set_logger
 
 
 class TestSetLogger:

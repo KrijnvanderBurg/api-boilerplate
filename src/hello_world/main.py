@@ -6,15 +6,15 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 
-from hello_world import logger
 from hello_world.database import Database
 from hello_world.health import router as health_router
 from hello_world.items import exceptions as item_exceptions
 from hello_world.items import router as items_router
+from hello_world.logger import get_logger
 from hello_world.settings import get_settings
 
 settings = get_settings()
-logger = logger.get_logger(__name__)
+logger = get_logger(__name__)
 
 
 @asynccontextmanager

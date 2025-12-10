@@ -5,11 +5,11 @@ from uuid import uuid4
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from hello_world import logger
 from hello_world.items import schemas
 from hello_world.items.models import Item
+from hello_world.logger import get_logger
 
-logger = logger.get_logger(__name__)
+logger = get_logger(__name__)
 
 
 class ItemService:
