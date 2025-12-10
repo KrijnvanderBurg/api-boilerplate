@@ -38,9 +38,8 @@ class TestRootEndpoint:
         response = await client.get("/")
         assert response.status_code == 200
         data = response.json()
-        assert "message" in data
-        assert "docs" in data
-        assert "health" in data
+        assert "health" in data["endpoints"]
+        assert "items" in data["endpoints"]
 
 
 class TestItemsEndpoints:
