@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from hello_world.database import Database
 from hello_world.health import router as health_router
@@ -19,14 +20,7 @@ logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
-    """Handle application lifespan events.
-
-    This context manager handles startup and shutdown events for the application.
-    Use this to initialize resources on startup and clean them up on shutdown.
-
-    Yields:
-        None: Control during the application's lifetime
-    """
+    """Handle application lifespan events."""
     # Startup
     logger.info(
         "Application starting",
@@ -34,17 +28,16 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
         version=settings.app_version,
     )
 
-    # Initialize database
-    db = Database(settings)
-    await db.create_tables()
-    logger.info("Database initialized", database_url=settings.database_url)
+    Database.initialize(settings)
+    await Database.create_tables()
+    logger.info("Database initialized")
 
     yield
 
     # Shutdown
     logger.info("Application shutting down")
-    await db.close()
-    logger.info("Database connections closed")
+    await Database.close()
+    logger.info("Database closed")
 
 
 app = FastAPI(
@@ -54,15 +47,33 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Root endpoint
+# Register exception handlers from items router (handlers defined in items/router.py for locality)
+app.add_exception_handler(
+    item_exceptions.ItemNotFoundError,
+    items_router.item_not_found_handler,
+)
+app.add_exception_handler(
+    item_exceptions.ItemValidationError,
+    items_router.item_validation_error_handler,
+)
+app.add_exception_handler(
+    item_exceptions.ItemAlreadyExistsError,
+    items_router.item_already_exists_handler,
+)
+
+
 @app.get("/", include_in_schema=False)
 async def root() -> dict[str, str]:
-    """Root endpoint redirect info.
-
-    Returns:
-        dict: Information about the API
-    """
+    """Root endpoint."""
     return {
         "message": "Hello World API",
         "docs": "/docs",
@@ -73,11 +84,6 @@ async def root() -> dict[str, str]:
 # Include routers
 app.include_router(health_router.router)
 app.include_router(items_router.router)
-
-# Register domain-specific exception handlers
-app.add_exception_handler(item_exceptions.ItemNotFoundError, items_router.item_not_found_handler)
-app.add_exception_handler(item_exceptions.ItemValidationError, items_router.item_validation_error_handler)
-app.add_exception_handler(item_exceptions.ItemAlreadyExistsError, items_router.item_already_exists_handler)
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -5,7 +5,8 @@ an async test client to avoid event loop issues.
 """
 
 import os
-from typing import Any
+from collections.abc import AsyncGenerator, Generator
+from urllib.parse import urlparse, urlunparse
 
 import pytest
 import pytest_asyncio
@@ -14,68 +15,69 @@ from testcontainers.postgres import PostgresContainer
 
 from hello_world.database import Database
 from hello_world.main import app
-from hello_world.settings import get_settings
+from hello_world.settings import Settings, get_settings
 
 
 @pytest.fixture(scope="session")
-def postgres_container():
-    """Create a PostgreSQL container for testing.
+def postgres_url() -> Generator[str, None, None]:
+    """Provide a PostgreSQL connection URL from a testcontainer.
 
-    This fixture creates a PostgreSQL container that lives for the entire
-    test session, providing a clean database for all tests.
+    The container runs for the entire test session and is automatically
+    cleaned up when the session ends.
 
     Yields:
-        PostgresContainer: The running PostgreSQL container
+        str: Async PostgreSQL connection URL
     """
     with PostgresContainer("postgres:16-alpine") as postgres:
-        yield postgres
+        # Parse the URL and reconstruct with asyncpg driver
+        sync_url = postgres.get_connection_url()
+        parsed = urlparse(sync_url)
+
+        # Reconstruct URL with asyncpg driver for async operations
+        async_url = urlunparse(
+            (
+                "postgresql+asyncpg",
+                parsed.netloc,
+                parsed.path,
+                parsed.params,
+                parsed.query,
+                parsed.fragment,
+            )
+        )
+        yield async_url
 
 
-@pytest_asyncio.fixture(scope="session")
-async def test_db(postgres_container: PostgresContainer) -> Any:
-    """Create a test database using the PostgreSQL container.
+@pytest_asyncio.fixture()
+async def client(postgres_url: str) -> AsyncGenerator[AsyncClient, None]:
+    """Create an async test client with a fresh database for each test.
+
+    Each test gets its own isolated database instance to prevent test
+    interference while sharing the same PostgreSQL container.
 
     Args:
-        postgres_container: The PostgreSQL container fixture
+        postgres_url: PostgreSQL connection URL from testcontainer
 
     Yields:
-        Database: The test database instance
+        AsyncClient: HTTP client for testing the API
     """
-    # Set the database URL from the container
-    # Replace psycopg2 driver with asyncpg for async operations
-    container_url = postgres_container.get_connection_url()
-    async_url = container_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
-    os.environ["HELLO_WORLD_DATABASE_URL"] = async_url
-
-    # Clear the settings cache and get fresh settings with the new database URL
+    # Configure database URL for this test
+    os.environ["HELLO_WORLD_DATABASE_URL"] = postgres_url
     get_settings.cache_clear()
-    settings = get_settings()
 
-    db = Database(settings)
-    await db.create_tables()
-    yield db
-    await db.drop_tables()
-    await db.close()
+    # Initialize database
+    settings = Settings()
+    Database.initialize(settings)
+    await Database.create_tables()
 
-
-@pytest_asyncio.fixture
-async def client(test_db: Database) -> Any:
-    """Create an async test client for the API.
-
-    This fixture provides an async httpx client for integration tests,
-    following FastAPI best practices to avoid event loop issues.
-
-    Args:
-        test_db: The test database fixture
-
-    Returns:
-        AsyncClient: An async test client for making requests to the API
-    """
+    # Create and yield test client
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-    ) as ac:
-        yield ac
+    ) as test_client:
+        yield test_client
+
+    # Cleanup database
+    await Database.close()
 
 
 pytest_plugins: list[str] = []

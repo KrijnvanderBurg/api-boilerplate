@@ -1,26 +1,4 @@
-"""Logging utilities for the Samara framework.
-
-This module provides a centralized logging configuration for the Samara framework,
-using structlog for structured logging. It integrates seamlessly with OpenTelemetry
-for distributed tracing and observability.
-
-When an OTLP (OpenTelemetry Protocol) logs endpoint is configured via environment
-variables or settings, all logs are automatically exported with full structured
-attributes, enabling powerful querying and analysis in backends like Loki/Grafana,
-Datadog, or any OpenTelemetry-compatible observability platform.
-
-Key Features:
-    - Centralized structured logging with structlog
-    - Automatic OpenTelemetry integration for distributed tracing
-    - Rich structured logging attributes for enhanced observability
-    - Familiar logging interface with structured context support
-
-Typical Usage:
-    >>> from samara.utils.logger import set_logger, get_logger
-    >>> set_logger(level="INFO")
-    >>> logger = get_logger(__name__)
-    >>> logger.info("Application started", version="1.0.0")
-"""
+"""Logging utilities with structured logging support."""
 
 import logging
 

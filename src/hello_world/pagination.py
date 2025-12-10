@@ -1,52 +1,30 @@
-"""Pagination utilities for list endpoints.
-
-This module provides standardized pagination functionality following FastAPI
-best practices. Use these utilities to ensure consistent pagination across
-all list endpoints.
-"""
+"""Pagination utilities for list endpoints."""
 
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 T = TypeVar("T")
 
 
 class PaginationParams(BaseModel):
-    """Pagination parameters for list endpoints.
+    """Pagination parameters."""
 
-    Attributes:
-        limit: Maximum number of items to return
-        offset: Number of items to skip
-    """
-
-    limit: int = Field(default=10, ge=1, le=100, description="Maximum number of items to return")
-    offset: int = Field(default=0, ge=0, description="Number of items to skip")
+    limit: int = Field(default=10, ge=1, le=100, description="Max items to return")
+    offset: int = Field(default=0, ge=0, description="Items to skip")
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
-    """Generic paginated response wrapper.
-
-    Attributes:
-        items: List of items in the current page
-        total: Total number of items available
-        limit: Maximum number of items per page
-        offset: Current offset
-        has_more: Whether there are more items available
-    """
+    """Paginated response wrapper."""
 
     items: list[T]
     total: int
     limit: int
     offset: int
 
-    @property
+    @computed_field
     def has_more(self) -> bool:
-        """Check if there are more items available.
-
-        Returns:
-            bool: True if there are more items beyond the current page
-        """
+        """Check if more items available."""
         return (self.offset + self.limit) < self.total
 
 
