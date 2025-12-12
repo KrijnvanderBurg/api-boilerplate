@@ -11,7 +11,7 @@ from urllib.parse import urlparse, urlunparse
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from testcontainers.postgres import PostgresContainer
+from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
 from hello_world.database import Database
 from hello_world.main import app
@@ -47,7 +47,7 @@ def postgres_url() -> Generator[str, None, None]:
         yield async_url
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture()  # type: ignore[misc]
 async def client(postgres_url: str) -> AsyncGenerator[AsyncClient, None]:
     """Create an async test client with a fresh database for each test.
 
