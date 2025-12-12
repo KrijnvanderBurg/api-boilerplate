@@ -13,10 +13,10 @@ from hello_world.health import router as health_router
 from hello_world.items import exceptions as item_exceptions
 from hello_world.items import router as items_router
 from hello_world.logger import get_logger
-from hello_world.settings import get_settings
+from hello_world.settings import Settings, get_settings
 
-settings = get_settings()
 logger = get_logger(__name__)
+settings: Settings = get_settings()
 
 
 @asynccontextmanager
@@ -40,14 +40,14 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
 app = FastAPI(
     title="Hello World API",
     description="A production-ready FastAPI boilerplate with best practices",
-    version=settings.app_version,
+    version=str(settings.app_version),
     lifespan=lifespan,
 )
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=settings.cors_origins or [],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -118,6 +118,12 @@ app.add_exception_handler(
 
 
 if __name__ == "__main__":  # pragma: no cover
+    if settings.server_host is None:
+        raise ValueError("Server Host setting is not set")
+
+    if settings.server_port is None:
+        raise ValueError("Server Port setting is not set")
+
     uvicorn.run(
         "hello_world.main:app",
         host=settings.server_host,

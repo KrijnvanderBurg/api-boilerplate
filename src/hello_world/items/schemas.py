@@ -1,59 +1,58 @@
 """Pydantic schemas for items domain."""
 
-from pydantic import Field, field_validator
+from typing import Annotated
+
+from pydantic import AfterValidator, Field
 
 from hello_world.items import constants
 from hello_world.models import CustomModel
 
 
+def validate_name_not_empty(v: str) -> str:
+    """Validate that name is not just whitespace."""
+    if not v.strip():
+        raise ValueError("Name cannot be empty or whitespace")
+    return v.strip()
+
+
 class ItemCreate(CustomModel):
     """Schema for creating a new item."""
 
-    name: str = Field(
-        min_length=constants.ITEM_NAME_MIN_LENGTH,
-        max_length=constants.ITEM_NAME_MAX_LENGTH,
-        description="Item name",
-    )
+    name: Annotated[
+        str,
+        Field(
+            min_length=constants.ITEM_NAME_MIN_LENGTH,
+            max_length=constants.ITEM_NAME_MAX_LENGTH,
+            description="Item name",
+        ),
+        AfterValidator(validate_name_not_empty),
+    ]
     description: str | None = Field(
         default=None,
         max_length=constants.ITEM_DESCRIPTION_MAX_LENGTH,
         description="Item description",
     )
     price: float = Field(ge=constants.ITEM_PRICE_MIN, description="Item price (must be positive)")
-
-    @field_validator("name")
-    @classmethod
-    def name_must_not_be_empty(cls, v: str) -> str:
-        """Validate that name is not just whitespace."""
-        _ = cls  # Mark as intentionally unused
-        if not v.strip():
-            raise ValueError("Name cannot be empty or whitespace")
-        return v.strip()
 
 
 class ItemUpdate(CustomModel):
     """Schema for updating an item (all fields required)."""
 
-    name: str = Field(
-        min_length=constants.ITEM_NAME_MIN_LENGTH,
-        max_length=constants.ITEM_NAME_MAX_LENGTH,
-        description="Item name",
-    )
+    name: Annotated[
+        str,
+        Field(
+            min_length=constants.ITEM_NAME_MIN_LENGTH,
+            max_length=constants.ITEM_NAME_MAX_LENGTH,
+            description="Item name",
+        ),
+        AfterValidator(validate_name_not_empty),
+    ]
     description: str | None = Field(
         default=None,
         max_length=constants.ITEM_DESCRIPTION_MAX_LENGTH,
         description="Item description",
     )
     price: float = Field(ge=constants.ITEM_PRICE_MIN, description="Item price (must be positive)")
-
-    @field_validator("name")
-    @classmethod
-    def name_must_not_be_empty(cls, v: str) -> str:
-        """Validate that name is not just whitespace."""
-        _ = cls  # Mark as intentionally unused
-        if not v.strip():
-            raise ValueError("Name cannot be empty or whitespace")
-        return v.strip()
 
 
 class ItemResponse(ItemCreate):

@@ -71,7 +71,7 @@ async def create_item(
     },
 )
 async def read_items(
-    pagination: Annotated[PaginationParams, Depends()],
+    pagination: Annotated[PaginationParams, Depends(PaginationParams)],
     item_service: Annotated[ItemService, Depends(read_item_service)],
 ) -> PaginatedResponse[schemas.ItemResponse]:
     """Read all items with pagination."""

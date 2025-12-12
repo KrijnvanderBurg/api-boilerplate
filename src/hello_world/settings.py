@@ -7,7 +7,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables with HELLO_WORLD_ prefix."""
+    """Application settings loaded from environment variables with HELLO_WORLD_ prefix.
+
+    All fields are required and must be provided via environment variables.
+    """
 
     model_config = SettingsConfigDict(
         env_prefix="HELLO_WORLD_",
@@ -16,20 +19,18 @@ class Settings(BaseSettings):
 
     log_level: str | None = Field(default=None, description="Logging level")
     environment: str | None = Field(default=None, description="Deployment environment")
-    app_version: str = Field(default="0.1.0", description="Application version")
-    database_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/hello_world",
-        description="Database URL",
-    )
-    server_host: str = Field(default="127.0.0.1", description="Server host")
-    server_port: int = Field(default=8000, description="Server port")
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8000"],
-        description="Allowed CORS origins",
-    )
+    app_version: str | None = Field(default=None, description="Application version")
+    database_url: str | None = Field(default=None, description="Database URL")
+    server_host: str | None = Field(default=None, description="Server host")
+    server_port: int | None = Field(default=None, description="Server port")
+    cors_origins: list[str] | None = Field(default=None, description="Allowed CORS origins")
 
 
 @lru_cache
 def get_settings() -> Settings:
-    """Get cached settings instance (singleton pattern)."""
+    """Get cached settings instance (singleton pattern).
+
+    Loads all settings from environment variables with HELLO_WORLD_ prefix.
+    Raises ValidationError if any required setting is missing.
+    """
     return Settings()

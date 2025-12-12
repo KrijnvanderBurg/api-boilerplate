@@ -2,13 +2,13 @@
 
 from fastapi import APIRouter, status
 
-from hello_world.settings import get_settings
+from hello_world.settings import Settings, get_settings
 
-router = APIRouter(prefix="/health", tags=["health"])
+router = APIRouter(tags=["health"])
 
 
 @router.get(
-    "",
+    "/health",
     status_code=status.HTTP_200_OK,
     summary="Health check",
     description="Check if the API is up and running.",
@@ -19,7 +19,7 @@ router = APIRouter(prefix="/health", tags=["health"])
                 "application/json": {
                     "example": {
                         "status": "healthy",
-                        "environment": "local",
+                        "environment": "development",
                     }
                 }
             },
@@ -28,10 +28,10 @@ router = APIRouter(prefix="/health", tags=["health"])
 )
 async def health_check() -> dict[str, str]:
     """Health check endpoint."""
-    settings = get_settings()
+    settings: Settings = get_settings()
     return {
         "status": "healthy",
-        "environment": settings.environment or "local",
+        "environment": str(settings.environment),
     }
 
 
