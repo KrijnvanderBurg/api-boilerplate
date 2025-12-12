@@ -79,4 +79,4 @@ with patch.object(request, 'get') as mock_get:
 ## Boundaries
 - ✅ **Always do:** Write clear, focused tests in `tests/`, follow naming conventions, minimize mocking
 - ⚠️ **Ask first:** Before modifying shared fixtures in conftest.py or changing test infrastructure
-- 🚫 **Never do:** Modify code in `src/`, create tests that depend on external resources, match on error messages
+- 🚫 **Never do:** Modify code in `src/`, match on error messages.
