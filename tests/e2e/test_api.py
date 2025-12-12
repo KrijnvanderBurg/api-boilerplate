@@ -221,7 +221,7 @@ class TestItemsEndpoints:
         item2_data = {"name": "Update Item 2", "price": 20.00}
 
         response1 = await client.post("/items", json=item1_data)
-        response2 = await client.post("/items", json=item2_data)
+        _ = await client.post("/items", json=item2_data)
 
         item1_id = response1.json()["id"]
 
