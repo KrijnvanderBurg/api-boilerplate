@@ -2,8 +2,10 @@
 
 from fastapi import APIRouter, status
 
+from hello_world.logger import get_logger
 from hello_world.settings import Settings, get_settings
 
+logger = get_logger(__name__)
 router = APIRouter(tags=["health"])
 
 
@@ -28,11 +30,14 @@ router = APIRouter(tags=["health"])
 )
 async def health_check() -> dict[str, str]:
     """Health check endpoint."""
+    logger.debug("Health check endpoint accessed")
     settings: Settings = get_settings()
-    return {
+    response = {
         "status": "healthy",
         "environment": str(settings.environment),
     }
+    logger.debug("Health check completed", environment=settings.environment)
+    return response
 
 
 @router.get(
@@ -55,4 +60,5 @@ async def health_check() -> dict[str, str]:
 )
 async def readiness_check() -> dict[str, str]:
     """Readiness check endpoint."""
+    logger.debug("Readiness check endpoint accessed")
     return {"status": "ready"}

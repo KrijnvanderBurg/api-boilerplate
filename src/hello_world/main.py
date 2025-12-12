@@ -23,18 +23,27 @@ settings: Settings = get_settings()
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     """Handle application lifespan events."""
     # Startup
-    logger.info("Application starting", environment=settings.environment, version=settings.app_version)
+    logger.info(
+        "Application starting",
+        environment=settings.environment,
+        version=settings.app_version,
+        debug=settings.debug,
+    )
+    logger.debug("Lifespan startup initiated")
 
     Database.initialize(settings)
     await Database.create_tables()
-    logger.info("Database initialized")
+    logger.info("Database initialized and tables created")
+    logger.debug("Application startup complete")
 
     yield
 
     # Shutdown
     logger.info("Application shutting down")
+    logger.debug("Lifespan shutdown initiated")
     await Database.close()
-    logger.info("Database closed")
+    logger.info("Database connections closed")
+    logger.debug("Application shutdown complete")
 
 
 app = FastAPI(
@@ -57,6 +66,7 @@ app.add_middleware(
 @app.get("/", include_in_schema=False)
 async def root() -> dict[str, Any]:
     """Root endpoint."""
+    logger.debug("Root endpoint accessed")
     return {
         "message": "Hello World API",
         "version": settings.app_version,
@@ -99,10 +109,13 @@ async def root() -> dict[str, Any]:
 
 
 # Include routers
+logger.debug("Registering routers")
 app.include_router(health_router.router)
 app.include_router(items_router.router)
+logger.debug("Routers registered")
 
 # Register exception handlers
+logger.debug("Registering exception handlers")
 app.add_exception_handler(
     item_exceptions.ItemNotFoundError,
     items_router.item_not_found_handler,
@@ -115,6 +128,7 @@ app.add_exception_handler(
     item_exceptions.ItemAlreadyExistsError,
     items_router.item_already_exists_handler,
 )
+logger.debug("Exception handlers registered")
 
 
 if __name__ == "__main__":  # pragma: no cover
