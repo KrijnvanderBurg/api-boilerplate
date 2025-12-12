@@ -3,9 +3,11 @@
 from uuid import uuid4
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from hello_world.items import schemas
+from hello_world.items.exceptions import ItemAlreadyExistsError
 from hello_world.items.models import Item
 from hello_world.logger import get_logger
 
@@ -36,10 +38,15 @@ class ItemService:
             price=float(item.price),
         )
         self.db.add(db_item)
-        await self.db.commit()
-        logger.debug("Item committed to database", item_id=item_id)
-        await self.db.refresh(db_item)
-        return schemas.ItemResponse.model_validate(db_item)
+        try:
+            await self.db.commit()
+            logger.debug("Item committed to database", item_id=item_id)
+            await self.db.refresh(db_item)
+            return schemas.ItemResponse.model_validate(db_item)
+        except IntegrityError:
+            await self.db.rollback()
+            logger.debug("Duplicate item name detected", name=item.name)
+            raise ItemAlreadyExistsError(item.name)
 
     async def read_items(self, limit: int = 10, offset: int = 0) -> tuple[list[schemas.ItemResponse], int]:
         """Read all items with pagination."""
@@ -83,10 +90,15 @@ class ItemService:
         existing_item.description = item_update.description
         existing_item.price = float(item_update.price)
 
-        await self.db.commit()
-        logger.debug("Item update committed to database", item_id=item_id)
-        await self.db.refresh(existing_item)
-        return schemas.ItemResponse.model_validate(existing_item)
+        try:
+            await self.db.commit()
+            logger.debug("Item update committed to database", item_id=item_id)
+            await self.db.refresh(existing_item)
+            return schemas.ItemResponse.model_validate(existing_item)
+        except IntegrityError:
+            await self.db.rollback()
+            logger.debug("Duplicate item name detected during update", name=item_update.name, item_id=item_id)
+            raise ItemAlreadyExistsError(item_update.name)
 
     async def delete_item(self, item_id: str) -> bool:
         """Delete an item."""

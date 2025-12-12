@@ -21,4 +21,5 @@ class ResponseDescriptions(StrEnum):
     ITEM_UPDATED = "Item updated successfully"
     ITEM_DELETED = "Item deleted successfully"
     ITEM_NOT_FOUND = "Item not found"
+    ITEM_ALREADY_EXISTS = "Item with this name already exists"
     VALIDATION_ERROR = "Validation error"

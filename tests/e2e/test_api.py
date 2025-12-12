@@ -96,6 +96,22 @@ class TestItemsEndpoints:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
+    async def test_create_item_duplicate_name(self, client: AsyncClient) -> None:
+        """Test creating an item with duplicate name returns 409."""
+        item_data = {
+            "name": "Duplicate Test Item",
+            "price": 10.00,
+        }
+        # Create first item
+        response1 = await client.post("/items", json=item_data)
+        assert response1.status_code == 201
+
+        # Try to create second item with same name
+        response2 = await client.post("/items", json=item_data)
+        assert response2.status_code == 409
+        data = response2.json()
+        assert "already exists" in data["detail"].lower()
+
     @pytest.mark.asyncio
     async def test_create_item_missing_required_fields(self, client: AsyncClient) -> None:
         """Test creating an item without required fields."""
@@ -187,15 +203,34 @@ class TestItemsEndpoints:
     async def test_update_item_invalid_data(self, client: AsyncClient) -> None:
         """Test updating an item with invalid data."""
         # Create an item
-        item_data = {"name": "Test Item", "price": 10.00}
+        item_data = {"name": "Update Invalid Test Item", "price": 10.00}
         create_response = await client.post("/items", json=item_data)
         created_item = create_response.json()
         item_id = created_item["id"]
 
         # Try to update with invalid price
-        update_data = {"price": -5.00}
+        update_data = {"name": "Update Invalid Test Item", "price": -5.00}
         response = await client.put(f"/items/{item_id}", json=update_data)
         assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_update_item_duplicate_name(self, client: AsyncClient) -> None:
+        """Test updating an item to a duplicate name returns 409."""
+        # Create two items
+        item1_data = {"name": "Update Item 1", "price": 10.00}
+        item2_data = {"name": "Update Item 2", "price": 20.00}
+
+        response1 = await client.post("/items", json=item1_data)
+        response2 = await client.post("/items", json=item2_data)
+
+        item1_id = response1.json()["id"]
+
+        # Try to update item1 to have the same name as item2
+        update_data = {"name": "Update Item 2", "price": 15.00}
+        response = await client.put(f"/items/{item1_id}", json=update_data)
+        assert response.status_code == 409
+        data = response.json()
+        assert "already exists" in data["detail"].lower()
 
     @pytest.mark.asyncio
     async def test_delete_item_success(self, client: AsyncClient) -> None:

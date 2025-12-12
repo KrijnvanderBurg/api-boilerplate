@@ -69,6 +69,7 @@ async def item_already_exists_handler(request: Request, exc: Exception) -> Respo
     summary="Create a new item",
     responses={
         201: {"description": ResponseDescriptions.ITEM_CREATED, "model": schemas.ItemResponse},
+        409: {"description": ResponseDescriptions.ITEM_ALREADY_EXISTS},
         422: {"description": ResponseDescriptions.VALIDATION_ERROR},
     },
 )
@@ -131,6 +132,7 @@ async def read_item(
     responses={
         200: {"description": ResponseDescriptions.ITEM_UPDATED, "model": schemas.ItemResponse},
         404: {"description": ResponseDescriptions.ITEM_NOT_FOUND},
+        409: {"description": ResponseDescriptions.ITEM_ALREADY_EXISTS},
         422: {"description": ResponseDescriptions.VALIDATION_ERROR},
     },
 )
