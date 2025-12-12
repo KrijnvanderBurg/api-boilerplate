@@ -10,14 +10,14 @@ from hello_world.items import exceptions, schemas
 from hello_world.items.service import ItemService
 
 
-async def read_item_service(db: Annotated[AsyncSession, Depends(get_db)]) -> ItemService:
+async def item_service(db: Annotated[AsyncSession, Depends(get_db)]) -> ItemService:
     """Dependency for ItemService injection."""
     return ItemService(db)
 
 
 async def valid_item_id(
     item_id: Annotated[str, Path(description="Item ID")],
-    item_service: Annotated[ItemService, Depends(read_item_service)],
+    item_service: Annotated[ItemService, Depends(item_service)],
 ) -> schemas.ItemResponse:
     """Validate item exists and return it."""
     item = await item_service.read_item(item_id)

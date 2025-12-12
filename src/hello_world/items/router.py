@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse, Response
 
 from hello_world.items import exceptions, schemas
-from hello_world.items.dependencies import ItemService, read_item_service, valid_item_id
+from hello_world.items.dependencies import ItemService, item_service, valid_item_id
 from hello_world.items.models import Item
 from hello_world.logger import get_logger
 from hello_world.pagination import PaginatedResponse, PaginationParams, paginate
@@ -55,7 +55,7 @@ async def item_already_exists_handler(request: Request, exc: Exception) -> Respo
 )
 async def create_item(
     item: schemas.ItemCreate,
-    item_service: Annotated[ItemService, Depends(read_item_service)],
+    item_service: Annotated[ItemService, Depends(item_service)],
 ) -> schemas.ItemResponse:
     """Create a new item."""
     logger.info("Creating item", item_name=item.name)
@@ -72,7 +72,7 @@ async def create_item(
 )
 async def read_items(
     pagination: Annotated[PaginationParams, Depends(PaginationParams)],
-    item_service: Annotated[ItemService, Depends(read_item_service)],
+    item_service: Annotated[ItemService, Depends(item_service)],
 ) -> PaginatedResponse[schemas.ItemResponse]:
     """Read all items with pagination."""
     items, total = await item_service.read_items(limit=pagination.limit, offset=pagination.offset)
@@ -113,7 +113,7 @@ async def read_item(
 async def update_item(
     item_update: schemas.ItemUpdate,
     item: Annotated[schemas.ItemResponse, Depends(valid_item_id)],
-    item_service: Annotated[ItemService, Depends(read_item_service)],
+    item_service: Annotated[ItemService, Depends(item_service)],
 ) -> schemas.ItemResponse:
     """Update an item. Validation handled by dependency."""
     result = await item_service.update_item(item.id, item_update)
@@ -133,7 +133,7 @@ async def update_item(
 )
 async def delete_item(
     item: Annotated[Item, Depends(valid_item_id)],
-    item_service: Annotated[ItemService, Depends(read_item_service)],
+    item_service: Annotated[ItemService, Depends(item_service)],
 ) -> None:
     """Delete an item. Validation handled by dependency."""
     await item_service.delete_item(item.id)
