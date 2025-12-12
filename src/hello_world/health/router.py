@@ -36,7 +36,7 @@ async def health_check() -> dict[str, str]:
 
 
 @router.get(
-    "/ready",
+    "/health/ready",
     status_code=status.HTTP_200_OK,
     summary="Readiness check",
     description="Check if the API is ready to accept requests.",
