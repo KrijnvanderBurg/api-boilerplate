@@ -36,6 +36,10 @@ class Database:
     @classmethod
     def initialize(cls, settings: Settings) -> None:
         """Initialize database engine once at startup."""
+        if settings.database_url is None:
+            logger.error("Database URL is not set in settings")
+            raise ValueError("Database URL must be set in settings")
+
         if cls._engine is None:
             logger.debug("Initializing database engine", database_url=settings.database_url.split("@")[-1])
             cls._engine = create_async_engine(

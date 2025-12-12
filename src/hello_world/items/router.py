@@ -74,11 +74,11 @@ async def item_already_exists_handler(request: Request, exc: Exception) -> Respo
 )
 async def create_item(
     item: schemas.ItemCreate,
-    item_service: Annotated[ItemService, Depends(item_service)],
+    service: Annotated[ItemService, Depends(item_service)],
 ) -> schemas.ItemResponse:
     """Create a new item."""
     logger.debug("Creating item request received", item_name=item.name, price=item.price)
-    result = await item_service.create_item(item)
+    result = await service.create_item(item)
     logger.info("Item created", item_id=result.id, item_name=result.name)
     return result
 
@@ -93,11 +93,11 @@ async def create_item(
 )
 async def read_items(
     pagination: Annotated[PaginationParams, Depends(PaginationParams)],
-    item_service: Annotated[ItemService, Depends(item_service)],
+    service: Annotated[ItemService, Depends(item_service)],
 ) -> PaginatedResponse[schemas.ItemResponse]:
     """Read all items with pagination."""
     logger.debug("Fetching items", limit=pagination.limit, offset=pagination.offset)
-    items, total = await item_service.read_items(limit=pagination.limit, offset=pagination.offset)
+    items, total = await service.read_items(limit=pagination.limit, offset=pagination.offset)
     logger.info("Items retrieved", count=len(items), total=total, limit=pagination.limit, offset=pagination.offset)
     return paginate(
         items=items,
@@ -137,11 +137,11 @@ async def read_item(
 async def update_item(
     item_update: schemas.ItemUpdate,
     item: Annotated[schemas.ItemResponse, Depends(valid_item_id)],
-    item_service: Annotated[ItemService, Depends(item_service)],
+    service: Annotated[ItemService, Depends(item_service)],
 ) -> schemas.ItemResponse:
     """Update an item. Validation handled by dependency."""
     logger.debug("Updating item", item_id=item.id, new_name=item_update.name, new_price=item_update.price)
-    result = await item_service.update_item(item.id, item_update)
+    result = await service.update_item(item.id, item_update)
     if result is None:
         logger.error("Item not found after validation passed", item_id=item.id)
         raise exceptions.ItemNotFoundError(item_id=item.id)
@@ -160,9 +160,9 @@ async def update_item(
 )
 async def delete_item(
     item: Annotated[Item, Depends(valid_item_id)],
-    item_service: Annotated[ItemService, Depends(item_service)],
+    service: Annotated[ItemService, Depends(item_service)],
 ) -> None:
     """Delete an item. Validation handled by dependency."""
     logger.debug("Deleting item", item_id=item.id, item_name=item.name)
-    await item_service.delete_item(item.id)
+    await service.delete_item(item.id)
     logger.info("Item deleted", item_id=item.id)

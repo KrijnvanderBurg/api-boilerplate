@@ -23,12 +23,7 @@ settings: Settings = get_settings()
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     """Handle application lifespan events."""
     # Startup
-    logger.info(
-        "Application starting",
-        environment=settings.environment,
-        version=settings.app_version,
-        debug=settings.debug,
-    )
+    logger.info("Application starting", environment=settings.environment, version=settings.app_version)
     logger.debug("Lifespan startup initiated")
 
     Database.initialize(settings)
@@ -143,5 +138,5 @@ if __name__ == "__main__":  # pragma: no cover
         host=settings.server_host,
         port=settings.server_port,
         reload=False,
-        log_level="info",
+        log_level=settings.log_level,
     )
