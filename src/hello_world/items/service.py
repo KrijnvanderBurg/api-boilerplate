@@ -43,10 +43,10 @@ class ItemService:
             logger.debug("Item committed to database", item_id=item_id)
             await self.db.refresh(db_item)
             return schemas.ItemResponse.model_validate(db_item)
-        except IntegrityError:
+        except IntegrityError as exc:
             await self.db.rollback()
             logger.debug("Duplicate item name detected", name=item.name)
-            raise ItemAlreadyExistsError(item.name)
+            raise ItemAlreadyExistsError(item.name) from exc
 
     async def read_items(self, limit: int = 10, offset: int = 0) -> tuple[list[schemas.ItemResponse], int]:
         """Read all items with pagination."""
@@ -95,10 +95,10 @@ class ItemService:
             logger.debug("Item update committed to database", item_id=item_id)
             await self.db.refresh(existing_item)
             return schemas.ItemResponse.model_validate(existing_item)
-        except IntegrityError:
+        except IntegrityError as exc:
             await self.db.rollback()
             logger.debug("Duplicate item name detected during update", name=item_update.name, item_id=item_id)
-            raise ItemAlreadyExistsError(item_update.name)
+            raise ItemAlreadyExistsError(item_update.name) from exc
 
     async def delete_item(self, item_id: str) -> bool:
         """Delete an item."""
