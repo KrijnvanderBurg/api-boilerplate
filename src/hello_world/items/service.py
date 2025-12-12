@@ -31,12 +31,7 @@ class ItemService:
             description=item.description,
             price=item.price,
         )
-        db_item = Item(
-            id=item_id,
-            name=item.name,
-            description=item.description,
-            price=float(item.price),
-        )
+        db_item = Item(id=item_id, name=item.name, description=item.description, price=float(item.price))
         self.db.add(db_item)
         try:
             await self.db.commit()
