@@ -6,6 +6,7 @@ semgrep.sarif
 semgrep-junit.xml
 requirements.txt
 **/output/*
+**/.ruff_cache/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
