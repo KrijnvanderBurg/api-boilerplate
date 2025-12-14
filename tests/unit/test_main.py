@@ -1,33 +1,47 @@
 """Unit tests for main application module."""
 
-import pytest
+import importlib
+import os
 
+import pytest
+from sqlalchemy import text
+
+import hello_world.main
+from hello_world.database import Database
 from hello_world.main import root
+from hello_world.settings import get_settings
 
 
 class TestLifespan:
     """Test lifespan context manager using real database."""
 
     @pytest.mark.asyncio
-    async def test_lifespan__can_start_and_shutdown(
+    async def test_lifespan__initializes_and_closes_database(
         self,
-        db_session,
+        postgres_url: str,
     ) -> None:
-        """Test that lifespan can start and shutdown without errors.
+        """Test that lifespan initializes database on startup and closes on shutdown."""
+        # Arrange - Set environment before importing main module
+        os.environ["HELLO_WORLD_DATABASE_URL"] = postgres_url
 
-        Note: The actual database initialization is tested in other test modules.
-        This test verifies the lifespan function structure works correctly.
-        """
-        # This test uses the client fixture from e2e tests which already
-        # tests lifespan integration. The db_session fixture ensures we have
-        # a working database for this test execution context.
+        # Force reload of settings and main module to pick up new environment
+        get_settings.cache_clear()
+        importlib.reload(hello_world.main)
 
-        # Arrange & Act - Having a db_session proves database infrastructure works
-        assert db_session is not None
+        # Reimport after reload
+        from hello_world.main import app as reloaded_app
+        from hello_world.main import lifespan as reloaded_lifespan
 
-        # The lifespan is already tested through the e2e tests which use the
-        # client fixture. This unit test serves as a placeholder for lifespan
-        # logic tests that don't require full integration testing.
+        # Act & Assert - Run the lifespan context manager
+        async with reloaded_lifespan(reloaded_app):
+            # During lifespan, database should be initialized
+            # Verify database is initialized by getting a session
+            async for session in Database.get_session():
+                result = await session.execute(text("SELECT 1"))
+                assert result.scalar() == 1
+                break
+
+        # After lifespan exits, cleanup happens automatically
 
 
 class TestRootEndpoint:

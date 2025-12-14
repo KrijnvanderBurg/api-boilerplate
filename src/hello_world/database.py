@@ -53,8 +53,6 @@ class Database:
                 expire_on_commit=False,
             )
             logger.debug("Database engine initialized")
-        else:
-            logger.debug("Database engine already initialized")
 
     @classmethod
     async def create_tables(cls) -> None:

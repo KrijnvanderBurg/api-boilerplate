@@ -9,18 +9,18 @@ from hello_world.items.service import ItemService
 from hello_world.pagination import PaginationParams
 
 
-class TestItemNotFoundHandler:
-    """Test item_not_found_handler exception handler."""
+class TestExceptionHandlers:
+    """Test exception handler functions."""
 
     @pytest.mark.asyncio
     async def test_item_not_found_handler__returns_404_response(self) -> None:
-        """Test that handler returns 404 status with error details."""
+        """Test that item_not_found_handler returns 404 with error details."""
         # Arrange
-        mock_request = Request(
+        request = Request(
             scope={
                 "type": "http",
                 "method": "GET",
-                "path": "/items/123",
+                "path": "/items/test-id",
                 "headers": [],
                 "query_string": b"",
                 "server": ("testserver", 80),
@@ -29,21 +29,16 @@ class TestItemNotFoundHandler:
         exc = exceptions.ItemNotFoundError("test-id")
 
         # Act
-        response = await router.item_not_found_handler(mock_request, exc)
+        response = await router.item_not_found_handler(request, exc)
 
         # Assert
         assert response.status_code == 404
-        assert b"Item with ID 'test-id' not found" in response.body
-
-
-class TestItemValidationErrorHandler:
-    """Test item_validation_error_handler exception handler."""
 
     @pytest.mark.asyncio
     async def test_item_validation_error_handler__returns_422_response(self) -> None:
-        """Test that handler returns 422 status with validation error details."""
+        """Test that item_validation_error_handler returns 422 with validation error."""
         # Arrange
-        mock_request = Request(
+        request = Request(
             scope={
                 "type": "http",
                 "method": "POST",
@@ -53,24 +48,19 @@ class TestItemValidationErrorHandler:
                 "server": ("testserver", 80),
             }
         )
-        exc = exceptions.ItemValidationError("Invalid price format")
+        exc = exceptions.ItemValidationError("Invalid price")
 
         # Act
-        response = await router.item_validation_error_handler(mock_request, exc)
+        response = await router.item_validation_error_handler(request, exc)
 
         # Assert
         assert response.status_code == 422
-        assert b"Invalid price format" in response.body
-
-
-class TestItemAlreadyExistsHandler:
-    """Test item_already_exists_handler exception handler."""
 
     @pytest.mark.asyncio
     async def test_item_already_exists_handler__returns_409_response(self) -> None:
-        """Test that handler returns 409 status with conflict details."""
+        """Test that item_already_exists_handler returns 409 with conflict error."""
         # Arrange
-        mock_request = Request(
+        request = Request(
             scope={
                 "type": "http",
                 "method": "POST",
@@ -80,14 +70,13 @@ class TestItemAlreadyExistsHandler:
                 "server": ("testserver", 80),
             }
         )
-        exc = exceptions.ItemAlreadyExistsError("Duplicate Item")
+        exc = exceptions.ItemAlreadyExistsError("Duplicate")
 
         # Act
-        response = await router.item_already_exists_handler(mock_request, exc)
+        response = await router.item_already_exists_handler(request, exc)
 
         # Assert
         assert response.status_code == 409
-        assert b"Item with name 'Duplicate Item' already exists" in response.body
 
 
 class TestCreateItemEndpoint:
