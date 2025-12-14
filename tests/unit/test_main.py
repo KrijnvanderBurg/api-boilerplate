@@ -36,10 +36,13 @@ class TestLifespan:
         async with reloaded_lifespan(reloaded_app):
             # During lifespan, database should be initialized
             # Verify database is initialized by getting a session
-            async for session in Database.get_session():
+            session_gen = Database.get_session()
+            session = await session_gen.__anext__()
+            try:
                 result = await session.execute(text("SELECT 1"))
                 assert result.scalar() == 1
-                break
+            finally:
+                await session_gen.aclose()
 
         # After lifespan exits, cleanup happens automatically
 

@@ -27,11 +27,14 @@ class TestDatabaseIntegration:
             await Database.create_tables()
 
             # Assert - verify tables exist by querying pg_tables
-            async for session in Database.get_session():
+            session_gen = Database.get_session()
+            session = await session_gen.__anext__()
+            try:
                 result = await session.execute(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'"))
                 tables = [row[0] for row in result.fetchall()]
                 assert "item" in tables  # Table is named "item" not "items"
-                break  # Only need to verify once
+            finally:
+                await session_gen.aclose()
         finally:
             # Cleanup
             await Database.close()
