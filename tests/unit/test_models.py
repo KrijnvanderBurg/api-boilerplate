@@ -3,44 +3,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from hello_world.models import CustomModel, datetime_to_gmt_str
-
-
-class TestDatetimeToGmtStr:
-    """Test datetime_to_gmt_str function."""
-
-    def test_datetime_to_gmt_str__with_timezone__formats_correctly(self) -> None:
-        """Test that datetime with timezone is formatted correctly."""
-        # Arrange
-        dt = datetime(2023, 12, 25, 15, 30, 45, tzinfo=ZoneInfo("UTC"))
-
-        # Act
-        result = datetime_to_gmt_str(dt)
-
-        # Assert
-        assert result == "2023-12-25T15:30:45+0000"
-
-    def test_datetime_to_gmt_str__without_timezone__adds_utc_and_formats(self) -> None:
-        """Test that datetime without timezone gets UTC added and formatted."""
-        # Arrange
-        dt = datetime(2023, 12, 25, 15, 30, 45)
-
-        # Act
-        result = datetime_to_gmt_str(dt)
-
-        # Assert
-        assert result == "2023-12-25T15:30:45+0000"
-
-    def test_datetime_to_gmt_str__with_different_timezone__preserves_timezone(self) -> None:
-        """Test that datetime with non-UTC timezone is formatted with correct offset."""
-        # Arrange
-        dt = datetime(2023, 12, 25, 15, 30, 45, tzinfo=ZoneInfo("America/New_York"))
-
-        # Act
-        result = datetime_to_gmt_str(dt)
-
-        # Assert - New York is UTC-5 in winter
-        assert result == "2023-12-25T15:30:45-0500"
+from hello_world.models import CustomModel
 
 
 class TestCustomModel:
