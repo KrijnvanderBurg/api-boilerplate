@@ -20,8 +20,8 @@ from testcontainers.postgres import PostgresContainer  # type: ignore[import-unt
 @pytest.fixture(scope="module")
 def api_client(e2e_postgres: PostgresContainer) -> Generator[str, None, None]:
     """Provide API base URL with postgres and app connected on network.
-    
-    Note: Uses e2e_postgres from conftest which is module-scoped. Network teardown 
+
+    Note: Uses e2e_postgres from conftest which is module-scoped. Network teardown
     may show an error about active endpoints, but this is harmless - the test passes
     and containers are cleaned up properly.
     """
