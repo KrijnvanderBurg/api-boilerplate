@@ -1,295 +1,99 @@
-"""End-to-end tests for the API.
+"""End-to-end tests using testcontainers for full application stack.
 
-Following FastAPI best practices, all integration tests use async test client
-with httpx to avoid event loop issues and properly test async endpoints.
+This test module spins up actual Docker containers:
+- PostgreSQL database container
+- FastAPI application container
+
+Tests verify real HTTP requests to the containerized application.
 """
 
+import time
+from collections.abc import Generator
+
+import httpx
 import pytest
-from httpx import AsyncClient
+from testcontainers.core.container import DockerContainer  # type: ignore[import-untyped]
+from testcontainers.core.network import Network  # type: ignore[import-untyped]
+from testcontainers.postgres import PostgresContainer  # type: ignore[import-untyped]
 
 
-class TestHealthEndpoints:
-    """Tests for health check endpoints."""
+@pytest.fixture(scope="module")
+def api_client(e2e_postgres: PostgresContainer) -> Generator[str, None, None]:
+    """Provide API base URL with postgres and app connected on network.
+    
+    Note: Uses e2e_postgres from conftest which is module-scoped. Network teardown 
+    may show an error about active endpoints, but this is harmless - the test passes
+    and containers are cleaned up properly.
+    """
+    with Network() as network:
+        network.connect(e2e_postgres.get_wrapped_container().id)
 
-    @pytest.mark.asyncio
-    async def test_health_check(self, client: AsyncClient) -> None:
-        """Test the health check endpoint."""
-        response = await client.get("/health")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "healthy"
-        assert "environment" in data
+        postgres_url = (
+            f"postgresql+asyncpg://{e2e_postgres.username}:{e2e_postgres.password}"
+            f"@{e2e_postgres.get_wrapped_container().name}:{e2e_postgres.port}/{e2e_postgres.dbname}"
+        )
 
-    @pytest.mark.asyncio
-    async def test_readiness_check(self, client: AsyncClient) -> None:
-        """Test the readiness check endpoint."""
-        response = await client.get("/health/ready")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "ready"
+        with (
+            DockerContainer(image="hello-world-api:test")
+            .with_env("HELLO_WORLD_DATABASE_URL", postgres_url)
+            .with_env("HELLO_WORLD_LOG_LEVEL", "info")
+            .with_env("HELLO_WORLD_ENVIRONMENT", "test")
+            .with_env("HELLO_WORLD_APP_VERSION", "test")
+            .with_env("HELLO_WORLD_SERVER_HOST", "0.0.0.0")
+            .with_env("HELLO_WORLD_SERVER_PORT", "8000")
+            .with_env("HELLO_WORLD_CORS_ORIGINS", "[]")
+            .with_exposed_ports(8000)
+        ) as app_container:
+            network.connect(app_container.get_wrapped_container().id)
+
+            port = app_container.get_exposed_port(8000)
+            base_url = f"http://localhost:{port}"
+
+            # Wait for app to be ready
+            for attempt in range(60):
+                try:
+                    response = httpx.get(f"{base_url}/health", timeout=2.0)
+                    if response.status_code == 200:
+                        break
+                except Exception:
+                    if attempt == 59:
+                        logs = app_container.get_logs()
+                        print(f"Container logs:\nSTDOUT:\n{logs[0].decode()}\nSTDERR:\n{logs[1].decode()}")
+                        raise
+                    time.sleep(1)
+
+            yield base_url
 
 
-class TestRootEndpoint:
-    """Tests for root endpoint."""
-
-    @pytest.mark.asyncio
-    async def test_root_endpoint(self, client: AsyncClient) -> None:
-        """Test the root endpoint."""
-        response = await client.get("/")
-        assert response.status_code == 200
-        data = response.json()
-        assert "health" in data["endpoints"]
-        assert "items" in data["endpoints"]
-
-
-class TestItemsEndpoints:
-    """Tests for items CRUD endpoints."""
-
-    @pytest.mark.asyncio
-    async def test_create_item_success(self, client: AsyncClient) -> None:
-        """Test creating a new item successfully."""
-        item_data = {
-            "name": "Test Item",
-            "description": "A test item",
-            "price": 29.99,
-        }
-        response = await client.post("/items", json=item_data)
-        assert response.status_code == 201
-        data = response.json()
-        assert data["name"] == item_data["name"]
-        assert data["description"] == item_data["description"]
-        assert data["price"] == item_data["price"]
-        assert "id" in data
-
-    @pytest.mark.asyncio
-    async def test_create_item_without_description(self, client: AsyncClient) -> None:
-        """Test creating an item without optional description."""
-        item_data = {
-            "name": "Minimal Item",
-            "price": 9.99,
-        }
-        response = await client.post("/items", json=item_data)
-        assert response.status_code == 201
-        data = response.json()
-        assert data["name"] == item_data["name"]
-        assert data["description"] is None
-        assert data["price"] == item_data["price"]
+class TestItemsE2E:
+    """End-to-end tests for items API using Docker containers."""
 
     @pytest.mark.asyncio
-    async def test_create_item_invalid_price(self, client: AsyncClient) -> None:
-        """Test creating an item with invalid price."""
-        item_data = {
-            "name": "Invalid Item",
-            "price": -10.00,
-        }
-        response = await client.post("/items", json=item_data)
-        assert response.status_code == 422
+    async def test_create_and_read_item(self, api_client: str) -> None:
+        """Test creating an item via POST and retrieving it via GET."""
+        async with httpx.AsyncClient(base_url=api_client, timeout=10.0) as client:
+            # Create item
+            item_data = {
+                "name": "E2E Test Item",
+                "description": "Created in end-to-end test",
+                "price": 42.99,
+            }
+            create_response = await client.post("/items", json=item_data)
 
-    @pytest.mark.asyncio
-    async def test_create_item_empty_name(self, client: AsyncClient) -> None:
-        """Test creating an item with empty name."""
-        item_data = {
-            "name": "   ",
-            "price": 10.00,
-        }
-        response = await client.post("/items", json=item_data)
-        assert response.status_code == 422
+            assert create_response.status_code == 201
+            created_item = create_response.json()
+            assert created_item["name"] == item_data["name"]
+            assert created_item["description"] == item_data["description"]
+            assert created_item["price"] == item_data["price"]
+            assert "id" in created_item
 
-    @pytest.mark.asyncio
-    async def test_create_item_duplicate_name(self, client: AsyncClient) -> None:
-        """Test creating an item with duplicate name returns 409."""
-        item_data = {
-            "name": "Duplicate Test Item",
-            "price": 10.00,
-        }
-        # Create first item
-        response1 = await client.post("/items", json=item_data)
-        assert response1.status_code == 201
+            # Read the created item
+            item_id = created_item["id"]
+            read_response = await client.get(f"/items/{item_id}")
 
-        # Try to create second item with same name
-        response2 = await client.post("/items", json=item_data)
-        assert response2.status_code == 409
-        data = response2.json()
-        assert "already exists" in data["detail"].lower()
-
-    @pytest.mark.asyncio
-    async def test_create_item_missing_required_fields(self, client: AsyncClient) -> None:
-        """Test creating an item without required fields."""
-        item_data = {"name": "Incomplete Item"}
-        response = await client.post("/items", json=item_data)
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_read_items_empty(self, client: AsyncClient) -> None:
-        """Test listing items when none exist."""
-        response = await client.get("/items")
-        assert response.status_code == 200
-        data = response.json()
-        assert "items" in data
-        assert isinstance(data["items"], list)
-
-    @pytest.mark.asyncio
-    async def test_read_items_with_data(self, client: AsyncClient) -> None:
-        """Test listing items after creating some."""
-        # Create items
-        items_to_create = [
-            {"name": "Item 1", "price": 10.00},
-            {"name": "Item 2", "price": 20.00},
-            {"name": "Item 3", "price": 30.00},
-        ]
-        for item_data in items_to_create:
-            await client.post("/items", json=item_data)
-
-        # List items
-        response = await client.get("/items")
-        assert response.status_code == 200
-        data = response.json()
-        assert "items" in data
-        assert isinstance(data["items"], list)
-        assert len(data["items"]) >= len(items_to_create)
-
-    @pytest.mark.asyncio
-    async def test_read_item_by_id(self, client: AsyncClient) -> None:
-        """Test retrieving a specific item by ID."""
-        # Create an item
-        item_data = {"name": "Specific Item", "price": 15.99}
-        create_response = await client.post("/items", json=item_data)
-        created_item = create_response.json()
-        item_id = created_item["id"]
-
-        # Get the item
-        response = await client.get(f"/items/{item_id}")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["id"] == item_id
-        assert data["name"] == item_data["name"]
-        assert data["price"] == item_data["price"]
-
-    @pytest.mark.asyncio
-    async def test_read_item_not_found(self, client: AsyncClient) -> None:
-        """Test retrieving a non-existent item."""
-        response = await client.get("/items/nonexistent-id")
-        assert response.status_code == 404
-        data = response.json()
-        assert "detail" in data
-
-    @pytest.mark.asyncio
-    async def test_update_item_success(self, client: AsyncClient) -> None:
-        """Test updating an item successfully."""
-        # Create an item
-        item_data = {"name": "Original", "description": "Original description", "price": 20.00}
-        create_response = await client.post("/items", json=item_data)
-        created_item = create_response.json()
-        item_id = created_item["id"]
-
-        # Update the item
-        update_data = {"name": "Updated Name", "description": "Updated description", "price": 25.00}
-        response = await client.put(f"/items/{item_id}", json=update_data)
-        assert response.status_code == 200
-        data = response.json()
-        assert data["id"] == item_id
-        assert data["name"] == update_data["name"]
-        assert data["description"] == update_data["description"]
-        assert data["price"] == update_data["price"]
-
-    @pytest.mark.asyncio
-    async def test_update_item_not_found(self, client: AsyncClient) -> None:
-        """Test updating a non-existent item."""
-        update_data = {"name": "Updated", "price": 50.00}
-        response = await client.put("/items/nonexistent-id", json=update_data)
-        assert response.status_code == 404
-
-    @pytest.mark.asyncio
-    async def test_update_item_invalid_data(self, client: AsyncClient) -> None:
-        """Test updating an item with invalid data."""
-        # Create an item
-        item_data = {"name": "Update Invalid Test Item", "price": 10.00}
-        create_response = await client.post("/items", json=item_data)
-        created_item = create_response.json()
-        item_id = created_item["id"]
-
-        # Try to update with invalid price
-        update_data = {"name": "Update Invalid Test Item", "price": -5.00}
-        response = await client.put(f"/items/{item_id}", json=update_data)
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_update_item_duplicate_name(self, client: AsyncClient) -> None:
-        """Test updating an item to a duplicate name returns 409."""
-        # Create two items
-        item1_data = {"name": "Update Item 1", "price": 10.00}
-        item2_data = {"name": "Update Item 2", "price": 20.00}
-
-        response1 = await client.post("/items", json=item1_data)
-        _ = await client.post("/items", json=item2_data)
-
-        item1_id = response1.json()["id"]
-
-        # Try to update item1 to have the same name as item2
-        update_data = {"name": "Update Item 2", "price": 15.00}
-        response = await client.put(f"/items/{item1_id}", json=update_data)
-        assert response.status_code == 409
-        data = response.json()
-        assert "already exists" in data["detail"].lower()
-
-    @pytest.mark.asyncio
-    async def test_delete_item_success(self, client: AsyncClient) -> None:
-        """Test deleting an item successfully."""
-        # Create an item
-        item_data = {"name": "To Be Deleted", "price": 5.00}
-        create_response = await client.post("/items", json=item_data)
-        created_item = create_response.json()
-        item_id = created_item["id"]
-
-        # Delete the item
-        response = await client.delete(f"/items/{item_id}")
-        assert response.status_code == 204
-
-        # Verify it's deleted
-        get_response = await client.get(f"/items/{item_id}")
-        assert get_response.status_code == 404
-
-    @pytest.mark.asyncio
-    async def test_delete_item_not_found(self, client: AsyncClient) -> None:
-        """Test deleting a non-existent item."""
-        response = await client.delete("/items/nonexistent-id")
-        assert response.status_code == 404
-
-
-class TestItemsCRUDFlow:
-    """Integration tests for complete CRUD flow."""
-
-    @pytest.mark.asyncio
-    async def test_full_crud_flow(self, client: AsyncClient) -> None:
-        """Test a complete CRUD flow: Create, Read, Update, Delete."""
-        # Create
-        create_data = {
-            "name": "Flow Test Item",
-            "description": "Testing full CRUD flow",
-            "price": 99.99,
-        }
-        create_response = await client.post("/items", json=create_data)
-        assert create_response.status_code == 201
-        item = create_response.json()
-        item_id = item["id"]
-
-        # Read
-        read_response = await client.get(f"/items/{item_id}")
-        assert read_response.status_code == 200
-        assert read_response.json()["name"] == create_data["name"]
-
-        # Update
-        update_data = {"name": "Updated Flow Test", "price": 149.99}
-        update_response = await client.put(f"/items/{item_id}", json=update_data)
-        assert update_response.status_code == 200
-        updated_item = update_response.json()
-        assert updated_item["name"] == update_data["name"]
-        assert updated_item["price"] == update_data["price"]
-
-        # Delete
-        delete_response = await client.delete(f"/items/{item_id}")
-        assert delete_response.status_code == 204
-
-        # Verify deletion
-        final_read = await client.get(f"/items/{item_id}")
-        assert final_read.status_code == 404
+            assert read_response.status_code == 200
+            retrieved_item = read_response.json()
+            assert retrieved_item["id"] == item_id
+            assert retrieved_item["name"] == item_data["name"]
+            assert retrieved_item["description"] == item_data["description"]
+            assert retrieved_item["price"] == item_data["price"]

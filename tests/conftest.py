@@ -34,6 +34,13 @@ def postgres_url() -> Generator[str, None, None]:
         yield async_url
 
 
+@pytest.fixture(scope="module")
+def e2e_postgres() -> Generator[PostgresContainer, None, None]:
+    """Provide a PostgreSQL container for E2E tests."""
+    with PostgresContainer("postgres:16-alpine") as postgres:
+        yield postgres
+
+
 @pytest_asyncio.fixture()  # type: ignore[misc]
 async def client(postgres_url: str) -> AsyncGenerator[AsyncClient, None]:
     """Create an async test client with database."""
